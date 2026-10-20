@@ -13,12 +13,12 @@ Développé avec **Django 5.2** selon l'architecture **MVT** (Model, View, Templ
 | Mariem Ferjani | Quiz et correction IA | `apps/quizzes` |
 | Saif Tannoubi | Mentorat et séances | `apps/mentoring` |
 | Mohamed Karim Kebaili | Certificats et statistiques | `apps/certificates` |
-| *(déjà réalisé)* | Utilisateurs et rôles | `apps/accounts` |
+| Emna Messaoudi | Utilisateurs et rôles | `apps/accounts` |
 
-## Installation
+## Installation (première fois)
 
 ```bash
-git clone <url-du-depot>
+git clone https://github.com/emnamess/SkillForge.git
 cd SkillForge
 
 python -m venv venv
@@ -26,7 +26,7 @@ venv\Scripts\activate          # Windows
 # source venv/bin/activate     # macOS / Linux
 
 pip install -r requirements.txt
-copy .env.example .env         # Windows (cp sous macOS / Linux)
+copy .env.example .env         # Windows (cp .env.example .env sous macOS / Linux)
 
 python manage.py migrate
 python manage.py createsuperuser
@@ -34,6 +34,109 @@ python manage.py runserver
 ```
 
 Ouvrir ensuite http://127.0.0.1:8000.
+Le compte créé avec `createsuperuser` a automatiquement le rôle **Administrateur**.
+
+> Sous PowerShell, si `venv\Scripts\activate` est bloqué :
+> `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` (une seule fois).
+
+## Commandes du quotidien
+
+Toujours activer l'environnement virtuel avant de travailler : `venv\Scripts\activate`.
+
+| Besoin | Commande |
+|---|---|
+| Lancer le serveur | `python manage.py runserver` |
+| Récupérer le travail des autres | `git checkout main` puis `git pull` |
+| Appliquer les nouvelles migrations (après chaque `git pull`) | `python manage.py migrate` |
+| Installer les nouvelles dépendances (si `requirements.txt` a changé) | `pip install -r requirements.txt` |
+| Créer les migrations après avoir modifié un modèle | `python manage.py makemigrations <app>` |
+| Lancer tous les tests | `python manage.py test` |
+| Lancer les tests d'une seule app | `python manage.py test apps.<app>` |
+| Vérifier le projet | `python manage.py check` |
+| Créer un administrateur | `python manage.py createsuperuser` |
+| Ouvrir un shell Django | `python manage.py shell` |
+| Envoyer les rappels de séances dus | `python manage.py envoyer_rappels` |
+| Ajouter une dépendance | `pip install <paquet>` puis l'ajouter à `requirements.txt` |
+
+**Après chaque `git pull` sur `main`**, toujours faire dans l'ordre :
+
+```bash
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py test
+```
+
+## Utilisateurs et rôles
+
+| URL | Page |
+|---|---|
+| `/comptes/inscription/` | Inscription (apprenant ou formateur) |
+| `/comptes/connexion/` | Connexion avec l'e-mail ou le nom d'utilisateur |
+| `/comptes/profil/` | Profil et changement de mot de passe |
+| `/comptes/mot-de-passe/oublie/` | Réinitialisation du mot de passe par e-mail |
+| `/comptes/utilisateurs/` | Gestion des utilisateurs (administrateur) |
+| `/admin/` | Back-office Django (administrateur) |
+
+- Un **formateur** qui s'inscrit est « en attente » : un administrateur doit le valider (page *Utilisateurs* ou `/admin/`).
+- En développement, les e-mails (réinitialisation du mot de passe, notifications) s'affichent **dans le terminal** où tourne `runserver`.
+
+Pour tester rapidement les trois rôles, créer des comptes depuis `/comptes/inscription/`, puis changer leur rôle depuis `/comptes/utilisateurs/` avec le compte administrateur.
+
+## Notifications, messagerie et rappels
+
+| URL | Page |
+|---|---|
+| `/notifications/` | Toutes les notifications (aussi accessibles via la cloche en haut à droite) |
+| `/notifications/messagerie/` | Messagerie interne |
+| `/notifications/messagerie/nouvelle/?a=<id>` | Écrire à un utilisateur (destinataire présélectionné) |
+
+Règles de la messagerie : un apprenant peut écrire aux formateurs et aux administrateurs ; formateurs et administrateurs peuvent écrire à tout le monde.
+
+### Utiliser les notifications depuis votre module
+
+Tout passe par `apps/notifications/services.py`, pas besoin de toucher aux modèles :
+
+```python
+from apps.notifications.models import Notification
+from apps.notifications.services import notifier, planifier_rappels_seance, annuler_rappels
+
+# Notifier un ou plusieurs utilisateurs (liste ou queryset). email=True envoie aussi un e-mail.
+notifier(apprenant, "Quiz corrigé", "Vous avez obtenu 16/20.",
+         type=Notification.Type.QUIZ, lien=quiz.get_absolute_url())
+
+notifier(cours.inscrits.all(), "Nouveau module publié", module.titre,
+         type=Notification.Type.COURS, lien=module.get_absolute_url())
+
+# Mentorat : programmer les rappels 24 h et 15 min avant la séance
+# (rappeler la fonction si la séance est déplacée, elle remplace les anciens rappels)
+planifier_rappels_seance(seance, [seance.apprenant, seance.formateur], seance.date_heure,
+                         titre="Séance de mentorat · Modélisation UML", lien=seance.get_absolute_url())
+
+# Séance annulée : supprimer ses rappels non envoyés
+annuler_rappels(seance)
+```
+
+Types disponibles : `MESSAGE`, `SEANCE`, `RAPPEL`, `COURS`, `QUIZ`, `CERTIFICAT`, `COMPTE`, `SYSTEME`.
+
+Bouton « Poser une question au formateur » :
+
+```django
+<a href="{% url 'notifications:nouvelle_conversation' %}?a={{ formateur.pk }}" class="btn btn-outline">
+    Poser une question au formateur
+</a>
+```
+
+### Envoyer les rappels
+
+Les rappels programmés sont envoyés par la commande `envoyer_rappels` :
+
+```bash
+python manage.py envoyer_rappels             # envoie les rappels dus, une fois
+python manage.py envoyer_rappels --boucle    # en développement : vérifie chaque minute (Ctrl+C pour arrêter)
+```
+
+En production, la lancer chaque minute avec le Planificateur de tâches Windows ou une tâche cron :
+`* * * * * cd /chemin/SkillForge && venv/bin/python manage.py envoyer_rappels`
 
 ## Structure
 
@@ -85,11 +188,38 @@ Chaque app suit le même schéma MVT :
    ```bash
    git checkout main
    git pull
-   git checkout -b feature/notifications-messagerie
+   git checkout -b feature/cours-modules
    ```
-3. Commits courts et explicites : `feat(notifications): modèle Notification`.
-4. Avant d'ouvrir la PR, se remettre à jour : `git pull origin main`.
-5. Si vous avez modifié un modèle, inclure les migrations (`python manage.py makemigrations <app>`) dans la PR.
-6. Ouvrir une Pull Request vers `main` ; au moins un membre la relit avant la fusion.
+3. Travailler, puis enregistrer régulièrement :
+   ```bash
+   git status                      # voir les fichiers modifiés
+   git add .
+   git commit -m "feat(courses): modèle Cours et Module"
+   ```
+4. Avant d'ouvrir la PR, récupérer les derniers changements de `main` et vérifier que tout passe :
+   ```bash
+   git pull origin main
+   python manage.py migrate
+   python manage.py test
+   ```
+5. Pousser la branche puis ouvrir la Pull Request vers `main` sur GitHub :
+   ```bash
+   git push -u origin feature/cours-modules
+   ```
+6. Au moins un membre relit la PR avant la fusion.
+7. Après la fusion, revenir sur `main` et se mettre à jour : `git checkout main` puis `git pull`.
 
-Préfixes de branche : `feature/`, `fix/`, `docs/`.
+Préfixes de branche : `feature/`, `fix/`, `docs/`. Préfixes de commit : `feat`, `fix`, `docs`, `style`, `test`, `refactor`.
+
+Si vous avez modifié un modèle, n'oubliez pas de commiter le fichier de migration généré (`apps/<app>/migrations/000X_....py`).
+
+### En cas de conflit
+
+Lors d'un `git pull origin main`, Git peut signaler un conflit. Ouvrir les fichiers indiqués, garder le bon code entre les marqueurs `<<<<<<<`, `=======` et `>>>>>>>`, puis :
+
+```bash
+git add <fichier>
+git commit
+```
+
+Les fichiers partagés (`static/css/main.css`, `templates/partials/`, `config/settings.py`, `config/urls.py`) sont les plus exposés aux conflits : modifiez-les le moins possible et prévenez l'équipe.
