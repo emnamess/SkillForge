@@ -5,12 +5,12 @@
     <div class="topbar-right">
         {# Emplacement de la cloche de notifications (module notifications) #}
         {% block topbar_notifications %}{% endblock %}
-        <div class="user-chip">
+        <a href="{% url 'accounts:profil' %}" class="user-chip">
             <span class="avatar">{{ user.initiales }}</span>
             <span class="user-chip-text">
                 <strong>{{ user }}</strong>
                 <small>{{ user.get_role_display }}</small>
             </span>
-        </div>
+        </a>
     </div>
 </header>

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Accès refusé{% endblock %}
+
+{% block content %}
+<div class="auth-card card">
+    <h1 class="page-title">Accès refusé</h1>
+    {% if user.en_attente_validation %}
+        <p class="page-subtitle">Votre compte formateur doit d'abord être validé par un administrateur.</p>
+    {% else %}
+        <p class="page-subtitle">Vous n'avez pas les droits nécessaires pour accéder à cette page.</p>
+    {% endif %}
+    <a href="{% if user.is_authenticated %}{% url 'accounts:dashboard' %}{% else %}{% url 'home' %}{% endif %}" class="btn btn-primary btn-block">Retour</a>
+</div>
+{% endblock %}

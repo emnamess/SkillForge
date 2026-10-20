@@ -1,0 +1,35 @@
+{% extends "base_app.html" %}
+
+{% block title %}Mon profil{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Mon profil</h1>
+<p class="page-subtitle">Vos informations personnelles.</p>
+
+<div class="grid-2-1">
+    <form method="post" class="card form">
+        {% csrf_token %}
+        <div class="form-row">
+            {% include "partials/form_field.html" with field=form.first_name %}
+            {% include "partials/form_field.html" with field=form.last_name %}
+        </div>
+        {% include "partials/form_field.html" with field=form.email %}
+        {% if form.specialite %}
+            {% include "partials/form_field.html" with field=form.specialite %}
+        {% endif %}
+        {% include "partials/form_field.html" with field=form.bio %}
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+    </form>
+
+    <aside class="card profil-resume">
+        <span class="avatar avatar-lg">{{ user.initiales }}</span>
+        <h2>{{ user }}</h2>
+        <span class="badge badge-indigo">{{ user.get_role_display }}</span>
+        {% if user.en_attente_validation %}
+            <span class="badge badge-orange">En attente de validation</span>
+        {% endif %}
+        <p class="muted">Membre depuis le {{ user.date_joined|date:"j F Y" }}</p>
+        <a href="{% url 'accounts:password_change' %}" class="btn btn-outline btn-block">Changer mon mot de passe</a>
+    </aside>
+</div>
+{% endblock %}

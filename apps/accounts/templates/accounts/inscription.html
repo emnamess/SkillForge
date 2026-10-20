@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Inscription{% endblock %}
+
+{% block content %}
+<div class="auth-card auth-card-wide card">
+    <h1 class="page-title">Créer un compte</h1>
+    <p class="page-subtitle">Rejoignez SkillForge en quelques secondes.</p>
+    <form method="post" class="form" novalidate>
+        {% csrf_token %}
+        {% for error in form.non_field_errors %}
+            <div class="alert alert-error">{{ error }}</div>
+        {% endfor %}
+
+        <div class="role-choice{% if form.role.errors %} has-error{% endif %}">
+            <span class="role-choice-label">{{ form.role.label }}</span>
+            {% for radio in form.role %}
+                <label class="role-option">{{ radio.tag }} <span>{{ radio.choice_label }}</span></label>
+            {% endfor %}
+        </div>
+
+        <div class="form-row">
+            {% include "partials/form_field.html" with field=form.first_name %}
+            {% include "partials/form_field.html" with field=form.last_name %}
+        </div>
+        {% include "partials/form_field.html" with field=form.email %}
+        <div id="champ-specialite">
+            {% include "partials/form_field.html" with field=form.specialite %}
+        </div>
+        {% include "partials/form_field.html" with field=form.password1 %}
+        {% include "partials/form_field.html" with field=form.password2 %}
+
+        <button type="submit" class="btn btn-primary btn-block">S'inscrire</button>
+    </form>
+    <p class="auth-switch">Déjà inscrit ? <a href="{% url 'accounts:login' %}">Se connecter</a></p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Affiche le champ « spécialité » uniquement pour les formateurs
+    (function () {
+        const champ = document.getElementById("champ-specialite");
+        const radios = document.querySelectorAll('input[name="role"]');
+        function maj() {
+            const choisi = document.querySelector('input[name="role"]:checked');
+            champ.hidden = !choisi || choisi.value !== "formateur";
+        }
+        radios.forEach(r => r.addEventListener("change", maj));
+        maj();
+    })();
+</script>
+{% endblock %}

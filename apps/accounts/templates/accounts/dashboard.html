@@ -5,4 +5,21 @@
 {% block content %}
 <h1 class="page-title">Bonjour, {{ user.first_name|default:user.username }}</h1>
 <p class="page-subtitle">Reprenez là où vous vous êtes arrêté.</p>
+
+{% if user.en_attente_validation %}
+    <div class="alert alert-warning">
+        Votre compte formateur est en attente de validation par un administrateur.
+        Vous pourrez créer et publier des cours dès qu'il sera validé.
+    </div>
+{% endif %}
+
+{% if user.est_administrateur %}
+    <div class="card card-action">
+        <div>
+            <h2>Gestion des utilisateurs</h2>
+            <p class="muted">Gérez les comptes, les rôles et validez les nouveaux formateurs.</p>
+        </div>
+        <a href="{% url 'accounts:utilisateurs' %}" class="btn btn-primary">Gérer les utilisateurs</a>
+    </div>
+{% endif %}
 {% endblock %}

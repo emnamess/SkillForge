@@ -1,0 +1,11 @@
+{# Usage : {% include "partials/form_field.html" with field=form.email %} #}
+<div class="form-field{% if field.errors %} has-error{% endif %}">
+    {% if field.field.widget.input_type == "checkbox" %}
+        <label class="checkbox">{{ field }} {{ field.label }}</label>
+    {% else %}
+        <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="required">*</span>{% endif %}</label>
+        {{ field }}
+    {% endif %}
+    {% if field.help_text %}<small class="help">{{ field.help_text|safe }}</small>{% endif %}
+    {% for error in field.errors %}<small class="error">{{ error }}</small>{% endfor %}
+</div>
