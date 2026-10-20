@@ -1,0 +1,88 @@
+{% extends "base_app.html" %}
+
+{% block title %}Utilisateurs{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Gestion des utilisateurs</h1>
+<p class="page-subtitle">Comptes, rôles et validation des formateurs.</p>
+
+<div class="stats">
+    <div class="stat card"><strong>{{ stats.total }}</strong><span>Utilisateurs</span></div>
+    <div class="stat card"><strong>{{ stats.apprenants }}</strong><span>Apprenants</span></div>
+    <div class="stat card"><strong>{{ stats.formateurs }}</strong><span>Formateurs</span></div>
+    <a class="stat card stat-alert" href="?statut=attente"><strong>{{ stats.en_attente }}</strong><span>En attente de validation</span></a>
+</div>
+
+<form method="get" class="card filtres">
+    {{ filtres.q }}
+    {{ filtres.role }}
+    {{ filtres.statut }}
+    <button type="submit" class="btn btn-primary">Filtrer</button>
+    {% if params %}<a href="{% url 'accounts:utilisateurs' %}" class="btn btn-outline">Réinitialiser</a>{% endif %}
+</form>
+
+<div class="card table-card">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Utilisateur</th>
+                <th>Rôle</th>
+                <th>Statut</th>
+                <th>Inscrit le</th>
+                <th class="text-right">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for u in page %}
+            <tr>
+                <td>
+                    <div class="user-cell">
+                        <span class="avatar">{{ u.initiales }}</span>
+                        <div>
+                            <strong>{{ u }}</strong>
+                            <small>{{ u.email }}</small>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span class="badge {% if u.est_formateur %}badge-green{% elif u.est_administrateur %}badge-rust{% else %}badge-indigo{% endif %}">{{ u.get_role_display }}</span>
+                </td>
+                <td>
+                    {% if not u.is_active %}<span class="badge badge-muted">Désactivé</span>
+                    {% elif u.en_attente_validation %}<span class="badge badge-orange">En attente</span>
+                    {% else %}<span class="badge badge-green">Actif</span>{% endif %}
+                </td>
+                <td>{{ u.date_joined|date:"d/m/Y" }}</td>
+                <td class="actions">
+                    {% if u.en_attente_validation %}
+                        <form method="post" action="{% url 'accounts:valider_formateur' u.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <button class="btn btn-sm btn-green">Valider</button>
+                        </form>
+                    {% endif %}
+                    <a href="{% url 'accounts:utilisateur_detail' u.pk %}" class="btn btn-sm btn-outline">Modifier</a>
+                    {% if u != user %}
+                        <form method="post" action="{% url 'accounts:basculer_actif' u.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <button class="btn btn-sm btn-outline">{% if u.is_active %}Désactiver{% else %}Réactiver{% endif %}</button>
+                        </form>
+                    {% endif %}
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="5" class="empty">Aucun utilisateur ne correspond à ces critères.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if page.has_other_pages %}
+<nav class="pagination">
+    {% if page.has_previous %}<a href="?{{ params }}&page={{ page.previous_page_number }}" class="btn btn-sm btn-outline">Précédent</a>{% endif %}
+    <span>Page {{ page.number }} sur {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a href="?{{ params }}&page={{ page.next_page_number }}" class="btn btn-sm btn-outline">Suivant</a>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}

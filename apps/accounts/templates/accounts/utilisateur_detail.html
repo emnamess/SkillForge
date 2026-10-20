@@ -1,0 +1,29 @@
+{% extends "base_app.html" %}
+
+{% block title %}{{ cible }}{% endblock %}
+
+{% block content %}
+<a href="{% url 'accounts:utilisateurs' %}" class="back-link">← Retour aux utilisateurs</a>
+<h1 class="page-title">{{ cible }}</h1>
+<p class="page-subtitle">{{ cible.email }} · inscrit le {{ cible.date_joined|date:"j F Y" }}</p>
+
+<div class="grid-2-1">
+    <form method="post" class="card form">
+        {% csrf_token %}
+        <h2>Rôle et statut</h2>
+        {% include "partials/form_field.html" with field=form.role %}
+        {% include "partials/form_field.html" with field=form.est_valide %}
+        {% include "partials/form_field.html" with field=form.is_active %}
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+    </form>
+
+    <aside class="card profil-resume">
+        <span class="avatar avatar-lg">{{ cible.initiales }}</span>
+        <h2>{{ cible }}</h2>
+        <span class="badge badge-indigo">{{ cible.get_role_display }}</span>
+        {% if cible.specialite %}<p><strong>Spécialité :</strong> {{ cible.specialite }}</p>{% endif %}
+        {% if cible.bio %}<p class="muted">{{ cible.bio|linebreaksbr }}</p>{% endif %}
+        <p class="muted">Dernière connexion : {{ cible.last_login|date:"d/m/Y H:i"|default:"jamais" }}</p>
+    </aside>
+</div>
+{% endblock %}

@@ -60,7 +60,19 @@ Chaque app suit le même schéma MVT :
 ## Conventions de l'équipe
 
 - **Utilisateur** : toujours référencer `settings.AUTH_USER_MODEL` (ou `get_user_model()`), jamais `auth.User`.
-- **Rôles** : `user.est_apprenant`, `user.est_formateur`, `user.est_administrateur`.
+- **Rôles** : `user.est_apprenant`, `user.est_formateur`, `user.est_administrateur`, `user.en_attente_validation`.
+- **Contrôle d'accès** : utiliser `apps/accounts/decorators.py`. Un formateur non validé est refusé, un administrateur passe toujours.
+  ```python
+  from apps.accounts.decorators import role_required, RoleRequiredMixin
+  from apps.accounts.models import User
+
+  @role_required(User.Role.FORMATEUR)
+  def creer_cours(request): ...
+
+  class CreerQuizView(RoleRequiredMixin, CreateView):
+      roles = [User.Role.FORMATEUR]
+  ```
+- **Formulaires** : afficher les champs avec `{% include "partials/form_field.html" with field=form.xxx %}`.
 - **Templates** : les pages publiques étendent `base.html`, les pages de l'espace connecté étendent `base_app.html`.
 - **Style** : réutiliser les classes de `static/css/main.css` (`.card`, `.btn`, `.badge-*`, `.page-title`…). Le style spécifique à un module va dans `static/css/<app>.css`.
 - **URLs** : chaque app a un `app_name`, donc `{% url 'courses:index' %}`.

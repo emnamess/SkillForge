@@ -87,6 +87,8 @@ DATABASES = {
 
 AUTH_USER_MODEL = "accounts.User"
 
+AUTHENTICATION_BACKENDS = ["apps.accounts.backends.EmailOrUsernameBackend"]
+
 LOGIN_URL = "accounts:login"
 LOGIN_REDIRECT_URL = "accounts:dashboard"
 LOGOUT_REDIRECT_URL = "home"
@@ -120,3 +122,9 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# E-mails (affichés dans la console en développement)
+
+EMAIL_BACKEND = os.getenv("DJANGO_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+DEFAULT_FROM_EMAIL = os.getenv("DJANGO_DEFAULT_FROM_EMAIL", "SkillForge <noreply@skillforge.tn>")

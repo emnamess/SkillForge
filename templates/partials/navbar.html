@@ -12,6 +12,7 @@
             <a href="{% url 'accounts:dashboard' %}" class="btn btn-primary">Mon espace</a>
         {% else %}
             <a href="{% url 'accounts:login' %}" class="btn btn-outline">Se connecter</a>
+            <a href="{% url 'accounts:inscription' %}" class="btn btn-primary">S'inscrire</a>
         {% endif %}
     </div>
 </header>
