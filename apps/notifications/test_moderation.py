@@ -32,6 +32,25 @@ class ReglesLocalesTests(TestCase):
     def test_vulgarite_signalee(self):
         self.assertEqual(moderer_par_regles("c'est la merde ce module").decision, "signale")
 
+    def test_insultes_contournees_bloquees(self):
+        for texte in ["fuck you", "fuuuuck", "F*CK", "f u c k", "f.u.c.k", "connnnard", "motherfucker",
+                      "kahba", "9a7ba", "nique ta mère"]:
+            self.assertTrue(moderer_par_regles(texte).bloque, texte)
+
+    def test_insulte_adressee_bloquee(self):
+        for texte in ["tu es un merde", "sale con", "t'es vraiment idiot", "you are stupid",
+                      "espèce de crétin", "m3rde t es un con"]:
+            self.assertTrue(moderer_par_regles(texte).bloque, texte)
+
+    def test_lettres_repetees_reconnues(self):
+        self.assertEqual(moderer_par_regles("merdeeeee").decision, "signale")
+
+    def test_faux_positifs_evites(self):
+        for texte in ["la dispute entre les deux tables", "je suis content du cours", "tu es vraiment doué",
+                      "concaténer deux chaînes", "la salle de cours", "You can use a LEFT JOIN", "Scunthorpe",
+                      "class Assignment", "le constructeur", "SELECT a, b, c FROM t", "plan A B C pour le projet"]:
+            self.assertTrue(moderer_par_regles(texte).autorise, texte)
+
     def test_numero_de_telephone_signale(self):
         r = moderer_par_regles("Appelle-moi au 22 345 678")
         self.assertEqual((r.decision, r.categorie), ("signale", "donnees_personnelles"))

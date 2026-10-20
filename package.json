@@ -1,0 +1,22 @@
+{
+  "name": "skillforge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Plateforme e-learning SkillForge (Django). Raccourcis npm vers run.py.",
+  "scripts": {
+    "setup": "python run.py setup",
+    "dev": "python run.py dev",
+    "serveur": "python run.py serveur",
+    "rappels": "python run.py rappels --boucle",
+    "test": "python run.py test",
+    "check": "python run.py check",
+    "migrate": "python run.py migrate",
+    "makemigrations": "python run.py makemigrations",
+    "update": "python run.py update",
+    "pull": "python run.py pull",
+    "demo": "python run.py demo",
+    "superuser": "python run.py superuser",
+    "shell": "python run.py shell",
+    "clean": "python run.py clean"
+  }
+}

@@ -105,28 +105,73 @@ class ResultatModeration:
 
 # ---------- Règles locales (repli sans IA) ----------
 
+LEET = str.maketrans({"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "@": "a", "$": "s", "€": "e"})
+
+
+def _sans_repetitions(texte):
+    """« merdeeeee » → « merde », « fuuuck » → « fuck » (les mots des listes sont réduits pareil)."""
+    return re.sub(r"(\w)\1+", r"\1", texte)
+
+
 def _normaliser(texte):
     """Minuscules sans accents, pour comparer « enculé » et « encule »."""
     texte = unicodedata.normalize("NFKD", texte.lower())
     return "".join(c for c in texte if not unicodedata.combining(c))
 
 
-MOTS_BLOQUES = [
-    "connard", "connasse", "salope", "pute", "encule", "fdp", "fils de pute", "ntm", "nique ta",
-    "batard", "ta gueule", "va te faire", "zebi", "nayek", "manyouk", "kahba",
-]
-MOTS_SIGNALES = ["merde", "putain", "con", "debile", "abruti", "idiot", "imbecile", "nul a chier"]
+def _variantes(texte):
+    """Versions du texte à tester : normale et « leet speak » (m3rde, f4ck), sans lettres répétées.
 
-RE_BLOQUES = re.compile(r"\b(" + "|".join(re.escape(m) for m in MOTS_BLOQUES) + r")\b")
-RE_SIGNALES = re.compile(r"\b(" + "|".join(re.escape(m) for m in MOTS_SIGNALES) + r")\b")
+    Le darija écrit en chiffres (9a7ba) est testé avant la conversion leet, qui le déformerait.
+    """
+    t = _normaliser(texte).replace("’", "'")
+    # « f u c k », « f.u.c.k » : on recolle les suites d'au moins 3 lettres isolées
+    recolle = RE_LETTRES_ISOLEES.sub(lambda m: re.sub(r"[\s.\-_]", "", m.group(0)), t)
+    return {_sans_repetitions(v) for v in (t, t.translate(LEET), recolle, recolle.translate(LEET))}
+
+
+RE_LETTRES_ISOLEES = re.compile(r"\b\w(?:[\s.\-_]+\w\b){2,}")
+
+
+def _motif(mots):
+    mots = sorted({_sans_repetitions(_normaliser(m)) for m in mots}, key=len, reverse=True)
+    return "(" + "|".join(re.escape(m).replace(r"\ ", r"\s+") for m in mots) + ")"
+
+
+MOTS_BLOQUES = [
+    # français
+    "connard", "connasse", "salope", "salopard", "salaud", "pute", "petasse", "encule", "enculer",
+    "fdp", "fils de pute", "ntm", "nique ta", "nique ta mere", "nique toi", "ta gueule", "ferme ta gueule",
+    "va te faire", "batard",
+    # anglais
+    "fuck", "fucking", "fucker", "fck", "fuk", "f*ck", "f**k", "motherfucker", "bitch", "asshole",
+    "bastard", "dickhead", "cunt", "stfu", "son of a bitch",
+    # darija
+    "zebi", "zab", "nayek", "mnayek", "manyouk", "kahba", "9a7ba", "9ahba", "nikomek", "zok",
+]
+MOTS_SIGNALES = [
+    "merde", "putain", "con", "conne", "debile", "abruti", "idiot", "imbecile", "stupide", "cretin",
+    "bouffon", "nul a chier", "shit", "crap", "wtf", "damn", "stupid", "dumb",
+]
+# Une insulte « adressée » (« tu es un … », « sale … », « you … ») est bloquée même avec un mot modéré
+DESIGNATIONS = [
+    "tu es", "t es", "t'es", "vous etes", "espece de", "espece d", "sale", "gros", "grosse",
+    "you are", "you're", "youre", "ur", "you",
+]
+
+RE_BLOQUES = re.compile(r"(?<![\w*])" + _motif(MOTS_BLOQUES) + r"(?![\w*])")
+RE_SIGNALES = re.compile(r"\b" + _motif(MOTS_SIGNALES) + r"\b")
+RE_ADRESSEE = re.compile(r"\b" + _motif(DESIGNATIONS) + r"\b(\s+\w+){0,2}?\s*\b" + _motif(MOTS_SIGNALES) + r"\b")
 RE_TELEPHONE = re.compile(r"(?:\+?216[\s.-]?)?\b[2-9]\d(?:[\s.-]?\d{3}){2}\b")
 
 
 def moderer_par_regles(texte):
-    t = _normaliser(texte)
-    if RE_BLOQUES.search(t):
+    variantes = _variantes(texte)
+    if any(RE_BLOQUES.search(t) for t in variantes):
         return ResultatModeration(BLOQUE, "insulte", "Ce message contient des propos insultants.")
-    if RE_SIGNALES.search(t):
+    if any(RE_ADRESSEE.search(t) for t in variantes):
+        return ResultatModeration(BLOQUE, "insulte", "Ce message insulte directement une personne.")
+    if any(RE_SIGNALES.search(t) for t in variantes):
         return ResultatModeration(SIGNALE, "vulgarite", "Ce message contient un langage familier ou vulgaire.")
     if RE_TELEPHONE.search(texte):
         return ResultatModeration(SIGNALE, "donnees_personnelles",

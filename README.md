@@ -20,51 +20,69 @@ Développé avec **Django 5.2** selon l'architecture **MVT** (Model, View, Templ
 ```bash
 git clone https://github.com/emnamess/SkillForge.git
 cd SkillForge
-
-python -m venv venv
-venv\Scripts\activate          # Windows
-# source venv/bin/activate     # macOS / Linux
-
-pip install -r requirements.txt
-copy .env.example .env         # Windows (cp .env.example .env sous macOS / Linux)
-
-python manage.py migrate
-python manage.py createsuperuser
-python manage.py runserver
+python run.py setup        # crée le venv, installe les dépendances, génère .env, crée la base
+python run.py superuser    # crée votre compte administrateur
+python run.py dev          # lance le projet
 ```
 
 Ouvrir ensuite http://127.0.0.1:8000.
-Le compte créé avec `createsuperuser` a automatiquement le rôle **Administrateur**.
+Le compte créé avec `superuser` a automatiquement le rôle **Administrateur**.
 
-> Sous PowerShell, si `venv\Scripts\activate` est bloqué :
-> `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` (une seule fois).
+> Sous macOS / Linux, remplacer `python` par `python3` si besoin.
 
-## Commandes du quotidien
+## Commandes du projet
 
-Toujours activer l'environnement virtuel avant de travailler : `venv\Scripts\activate`.
+Toutes les commandes passent par **`run.py`** (l'équivalent des scripts d'un `package.json`).
+Il utilise automatiquement le Python du `venv` : **pas besoin d'activer l'environnement virtuel**.
 
-| Besoin | Commande |
+| Commande | Rôle |
 |---|---|
-| Lancer le serveur | `python manage.py runserver` |
-| Récupérer le travail des autres | `git checkout main` puis `git pull` |
-| Appliquer les nouvelles migrations (après chaque `git pull`) | `python manage.py migrate` |
-| Installer les nouvelles dépendances (si `requirements.txt` a changé) | `pip install -r requirements.txt` |
-| Créer les migrations après avoir modifié un modèle | `python manage.py makemigrations <app>` |
-| Lancer tous les tests | `python manage.py test` |
-| Lancer les tests d'une seule app | `python manage.py test apps.<app>` |
-| Vérifier le projet | `python manage.py check` |
-| Créer un administrateur | `python manage.py createsuperuser` |
-| Ouvrir un shell Django | `python manage.py shell` |
-| Envoyer les rappels de séances dus | `python manage.py envoyer_rappels` |
-| Ajouter une dépendance | `pip install <paquet>` puis l'ajouter à `requirements.txt` |
+| `python run.py` | Affiche la liste des commandes |
+| `python run.py setup` | Installe le projet (venv, dépendances, `.env`, base de données) |
+| `python run.py dev` | Lance le serveur **et** l'envoi des rappels (Ctrl+C arrête tout) |
+| `python run.py dev 8001` | Idem sur un autre port |
+| `python run.py serveur` | Lance uniquement le serveur web |
+| `python run.py test` | Lance tous les tests |
+| `python run.py test apps.accounts` | Lance les tests d'une seule app |
+| `python run.py check` | Vérifie la configuration et les migrations oubliées (à faire avant une PR) |
+| `python run.py makemigrations courses` | Crée les migrations après une modification de modèle |
+| `python run.py migrate` | Applique les migrations |
+| `python run.py pull` | Récupère `main` puis met tout à jour (dépendances, migrations, tests) |
+| `python run.py update` | Met à jour après un `git pull` fait à la main |
+| `python run.py demo` | Crée des comptes de démo avec des conversations (voir ci-dessous) |
+| `python run.py demo --reinitialiser` | Supprime puis recrée les données de démo |
+| `python run.py superuser` | Crée un compte administrateur |
+| `python run.py shell` | Ouvre un shell Python avec Django chargé |
+| `python run.py rappels` | Envoie les rappels de séances dus |
+| `python run.py clean` | Supprime les dossiers `__pycache__` |
 
-**Après chaque `git pull` sur `main`**, toujours faire dans l'ordre :
+### Comptes de démo
+
+`python run.py demo` crée des comptes prêts à l'emploi pour tester tous les rôles
+(mot de passe commun : `SkillForge2026!`) :
+
+| E-mail | Rôle |
+|---|---|
+| `admin@demo.skillforge.tn` | Administrateur (accès à `/admin/`) |
+| `karim@demo.skillforge.tn`, `leila@demo.skillforge.tn` | Formateurs validés |
+| `sami@demo.skillforge.tn` | Formateur en attente de validation |
+| `yasmine@demo.skillforge.tn`, `amine@demo.skillforge.tn`, `sarra@demo.skillforge.tn` | Apprenants |
+
+Ils arrivent avec des conversations, des notifications, un message signalé à modérer et un rappel de séance
+qui arrive 2 minutes après la création (si `python run.py dev` tourne). Pour tester le temps réel, ouvrir deux
+navigateurs (ou une fenêtre de navigation privée) avec deux comptes différents.
+
+Chaque module peut compléter `apps/accounts/management/commands/creer_demo.py` avec ses propres données
+(cours, quiz, séances…).
+
+**Avec npm** (si Node.js est installé) : les mêmes commandes existent dans `package.json`.
 
 ```bash
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py test
+npm run dev
+npm run test -- apps.accounts      # les arguments passent après --
 ```
+
+Ajouter une dépendance Python : `venv\Scripts\pip install <paquet>` (ou `venv/bin/pip`), puis l'ajouter à `requirements.txt`.
 
 ## Utilisateurs et rôles
 
@@ -133,7 +151,7 @@ Bouton « Poser une question au formateur » :
 La messagerie et la cloche fonctionnent en temps réel grâce à **Django Channels** :
 messages instantanés, indicateur « en train d'écrire », statut en ligne et notifications en direct (toasts).
 
-- Rien à lancer en plus : `python manage.py runserver` démarre **Daphne** (serveur ASGI) qui gère HTTP et WebSockets.
+- Rien à lancer en plus : `python run.py dev` démarre **Daphne** (serveur ASGI) qui gère HTTP et WebSockets.
   Le terminal affiche les lignes `WebSocket CONNECT ...`.
 - Les notifications créées avec `notifier(...)` arrivent automatiquement en direct, aucun code à ajouter.
 - Si le WebSocket est coupé, la page se rabat toute seule sur une actualisation périodique.
@@ -173,8 +191,8 @@ numéros de téléphone) : la messagerie continue de fonctionner. Les tests n'ap
 Les rappels programmés sont envoyés par la commande `envoyer_rappels` :
 
 ```bash
-python manage.py envoyer_rappels             # envoie les rappels dus, une fois
-python manage.py envoyer_rappels --boucle    # en développement : vérifie chaque minute (Ctrl+C pour arrêter)
+python run.py rappels             # envoie les rappels dus, une fois
+python run.py rappels --boucle    # vérifie chaque minute (déjà inclus dans python run.py dev)
 ```
 
 En production, la lancer chaque minute avec le Planificateur de tâches Windows ou une tâche cron :
@@ -241,8 +259,8 @@ Chaque app suit le même schéma MVT :
 4. Avant d'ouvrir la PR, récupérer les derniers changements de `main` et vérifier que tout passe :
    ```bash
    git pull origin main
-   python manage.py migrate
-   python manage.py test
+   python run.py update
+   python run.py check
    ```
 5. Pousser la branche puis ouvrir la Pull Request vers `main` sur GitHub :
    ```bash
