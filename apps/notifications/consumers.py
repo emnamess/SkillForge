@@ -1,12 +1,14 @@
 """Consumers WebSocket : l'équivalent des vues pour les connexions temps réel."""
 
+from asgiref.sync import sync_to_async
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from django.core.exceptions import PermissionDenied, ValidationError
 
 from . import realtime
 from .models import Conversation
-from .services import envoyer_message
+from .moderation import moderer
+from .services import MessageBloque, envoyer_message
 
 FERMETURE_NON_AUTORISE = 4403
 
@@ -100,16 +102,22 @@ class ConversationConsumer(AsyncJsonWebsocketConsumer):
 
     async def envoyer(self, texte, ref):
         try:
-            await database_sync_to_async(self._envoyer)(texte)
+            # L'appel à l'IA (réseau, ~1 s) tourne dans un thread à part
+            resultat = await sync_to_async(moderer, thread_sensitive=False)(texte)
+            await database_sync_to_async(self._envoyer)(texte, resultat)
+        except MessageBloque as e:
+            await self.send_json({"type": "erreur", "ref": ref, "bloque": True,
+                                  "categorie": e.resultat.libelle_categorie,
+                                  "message": e.resultat.raison or "Message refusé par la modération."})
         except (ValidationError, PermissionDenied) as e:
             message = e.messages[0] if isinstance(e, ValidationError) else str(e)
             await self.send_json({"type": "erreur", "ref": ref, "message": message})
         else:
             await self.send_json({"type": "envoye", "ref": ref})
 
-    def _envoyer(self, texte):
+    def _envoyer(self, texte, resultat):
         conversation = Conversation.objects.get(pk=self.conversation_id)
-        envoyer_message(conversation, self.user, texte)
+        envoyer_message(conversation, self.user, texte, resultat_moderation=resultat)
 
     @database_sync_to_async
     def marquer_lue(self):

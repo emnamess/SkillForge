@@ -51,6 +51,7 @@ def message_en_dict(message):
         "initiales": message.expediteur.initiales,
         "contenu": message.contenu,
         "heure": date_format(localtime(message.date_envoi), "H:i"),
+        "signale": message.signale,
         "fichier": {
             "url": message.url_fichier(),
             "nom": message.nom_fichier,

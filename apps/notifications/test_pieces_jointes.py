@@ -24,7 +24,7 @@ def pdf(nom="cours.pdf", taille=100):
     return SimpleUploadedFile(nom, b"%PDF" + b"0" * taille, content_type="application/pdf")
 
 
-@override_settings(PRIVATE_MEDIA_ROOT=DOSSIER_TEST)
+@override_settings(PRIVATE_MEDIA_ROOT=DOSSIER_TEST, GEMINI_API_KEY="")
 class PiecesJointesTests(TestCase):
     @classmethod
     def tearDownClass(cls):
@@ -86,6 +86,7 @@ class PiecesJointesTests(TestCase):
         self.assertContains(r, "📎 cours.pdf")
 
 
+@override_settings(GEMINI_API_KEY="")
 class RechercheTests(TestCase):
     def setUp(self):
         self.apprenant = creer("yasmine@test.tn")

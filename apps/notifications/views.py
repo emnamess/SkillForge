@@ -9,12 +9,14 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_POST
 
+from apps.accounts.decorators import admin_required
 from apps.accounts.models import User
 
 from .forms import MessageForm, NouvelleConversationForm
-from .models import Conversation, Message
+from .models import Conversation, Message, Signalement
+from .moderation import ia_disponible
 from .realtime import est_en_ligne, message_en_dict
-from .services import (envoyer_message, marquer_toutes_lues, messages_non_lus,
+from .services import (MessageBloque, envoyer_message, marquer_toutes_lues, messages_non_lus,
                        obtenir_conversation, peut_ecrire_a, rechercher_messages)
 
 
@@ -115,6 +117,8 @@ def messagerie(request, pk=None):
                 try:
                     message = envoyer_message(conversation, request.user, form.cleaned_data["contenu"],
                                               form.cleaned_data["fichier"])
+                except MessageBloque as e:
+                    erreur = f"Message bloqué par la modération : {e.resultat.raison}"
                 except ValidationError as e:
                     erreur = e.messages[0]
                 else:
@@ -183,8 +187,12 @@ def nouvelle_conversation(request):
             messages.error(request, "Vous ne pouvez pas écrire à cet utilisateur.")
         else:
             conversation = obtenir_conversation(request.user, destinataire)
-            envoyer_message(conversation, request.user, form.cleaned_data["contenu"])
-            return redirect(conversation)
+            try:
+                envoyer_message(conversation, request.user, form.cleaned_data["contenu"])
+            except MessageBloque as e:
+                form.add_error("contenu", f"Message bloqué par la modération : {e.resultat.raison}")
+            else:
+                return redirect(conversation)
 
     return render(request, "notifications/nouvelle_conversation.html", {
         "form": form,
@@ -204,3 +212,56 @@ def api_messages(request, pk):
     return JsonResponse({"messages": [
         {**message_en_dict(m), "moi": m.expediteur_id == request.user.pk} for m in nouveaux
     ]})
+
+
+# ---------- Modération (administrateur) ----------
+
+@admin_required
+def moderation(request):
+    filtre = request.GET.get("filtre", "a-traiter")
+    qs = Signalement.objects.select_related("auteur", "message", "traite_par", "conversation")
+    if filtre == "a-traiter":
+        qs = qs.filter(traite=False)
+    elif filtre == "traites":
+        qs = qs.filter(traite=True)
+
+    stats = Signalement.objects.aggregate(
+        a_traiter=Count("id", filter=Q(traite=False)),
+        bloques=Count("id", filter=Q(decision=Signalement.Decision.BLOQUE)),
+        signales=Count("id", filter=Q(decision=Signalement.Decision.SIGNALE)),
+        par_ia=Count("id", filter=Q(source=Signalement.Source.GEMINI)),
+    )
+    # Nombre de signalements par auteur, pour repérer les récidivistes
+    recidives = dict(Signalement.objects.values_list("auteur").annotate(n=Count("id")))
+    page = Paginator(qs, 20).get_page(request.GET.get("page"))
+    for s in page:
+        s.nb_signalements_auteur = recidives.get(s.auteur_id, 0)
+
+    return render(request, "notifications/moderation.html", {
+        "page": page,
+        "filtre": filtre,
+        "stats": stats,
+        "ia_active": ia_disponible(),
+    })
+
+
+@require_POST
+@admin_required
+def traiter_signalement(request, pk):
+    signalement = get_object_or_404(Signalement, pk=pk)
+    action = request.POST.get("action")
+
+    if action == "supprimer_message" and signalement.message:
+        signalement.message.delete()
+        signalement.message = None  # le signalement est conservé comme trace
+        messages.success(request, "Le message a été supprimé de la conversation.")
+    elif action == "retablir" and signalement.message:
+        Message.objects.filter(pk=signalement.message_id).update(signale=False)
+        messages.success(request, "Le message a été rétabli.")
+    else:
+        messages.success(request, "Signalement marqué comme traité.")
+
+    signalement.traite = True
+    signalement.traite_par = request.user
+    signalement.save(update_fields=["traite", "traite_par", "message"])
+    return rediriger_vers_suivant(request, "notifications:moderation")

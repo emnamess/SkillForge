@@ -24,13 +24,23 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.mail import send_mail
 from django.db import transaction
 from django.template.defaultfilters import filesizeformat
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
 
 from . import realtime
-from .models import Conversation, Message, Notification, Rappel
+from .moderation import moderer
+from .models import Conversation, Message, Notification, Rappel, Signalement
 
 logger = logging.getLogger(__name__)
+
+
+class MessageBloque(Exception):
+    """Levée quand la modération refuse un message. `resultat` contient la raison."""
+
+    def __init__(self, resultat):
+        super().__init__(resultat.raison)
+        self.resultat = resultat
 
 DELAIS_RAPPEL_SEANCE = (timedelta(hours=24), timedelta(minutes=15))
 
@@ -110,8 +120,22 @@ def valider_piece_jointe(fichier):
                               f"({filesizeformat(settings.PIECE_JOINTE_TAILLE_MAX)}).")
 
 
-def envoyer_message(conversation, expediteur, contenu="", fichier=None):
-    """Envoie un message (texte et/ou pièce jointe) et le diffuse en temps réel."""
+def _notifier_moderateurs(signalement):
+    from apps.accounts.models import User
+
+    admins = User.objects.filter(role=User.Role.ADMINISTRATEUR, is_active=True)
+    action = "bloqué" if signalement.decision == Signalement.Decision.BLOQUE else "signalé"
+    notifier(admins, f"Message {action} par la modération IA",
+             f"{signalement.auteur} · {signalement.raison}", type=Notification.Type.SYSTEME,
+             lien=reverse("notifications:moderation"))
+
+
+def envoyer_message(conversation, expediteur, contenu="", fichier=None, resultat_moderation=None):
+    """Envoie un message après modération. Lève `MessageBloque` si l'IA le refuse.
+
+    `resultat_moderation` permet de fournir une analyse déjà faite (le consumer WebSocket
+    interroge l'IA dans un thread séparé pour ne pas bloquer les autres connexions).
+    """
     contenu = (contenu or "").strip()
     if not conversation.participants.filter(pk=expediteur.pk).exists():
         raise PermissionDenied("Vous ne participez pas à cette conversation.")
@@ -120,17 +144,41 @@ def envoyer_message(conversation, expediteur, contenu="", fichier=None):
     if fichier:
         valider_piece_jointe(fichier)
 
-    with transaction.atomic():
-        message = Message(conversation=conversation, expediteur=expediteur, contenu=contenu)
-        if fichier:
-            message.nom_fichier = Path(fichier.name).name[:255]
-            message.taille_fichier = fichier.size
-            message.fichier = fichier
-        message.save()
-        conversation.save(update_fields=["date_maj"])
+    # L'appel à l'IA se fait hors transaction : la base n'est pas verrouillée pendant l'attente
+    resultat = resultat_moderation or moderer(contenu)
 
-        realtime.diffuser_message(message)
-        _notifier_destinataire(conversation, expediteur, message)
+    with transaction.atomic():
+        if resultat.bloque:
+            signalement = Signalement.objects.create(
+                conversation=conversation, auteur=expediteur, contenu=contenu,
+                decision=Signalement.Decision.BLOQUE, categorie=resultat.categorie,
+                raison=resultat.raison, source=resultat.source,
+            )
+            _notifier_moderateurs(signalement)
+        else:
+            message = Message(conversation=conversation, expediteur=expediteur, contenu=contenu,
+                              signale=not resultat.autorise)
+            if fichier:
+                message.nom_fichier = Path(fichier.name).name[:255]
+                message.taille_fichier = fichier.size
+                message.fichier = fichier
+            message.save()
+            conversation.save(update_fields=["date_maj"])
+
+            if message.signale:
+                signalement = Signalement.objects.create(
+                    message=message, conversation=conversation, auteur=expediteur, contenu=contenu,
+                    decision=Signalement.Decision.SIGNALE, categorie=resultat.categorie,
+                    raison=resultat.raison, source=resultat.source,
+                )
+                _notifier_moderateurs(signalement)
+
+            realtime.diffuser_message(message)
+            _notifier_destinataire(conversation, expediteur, message)
+
+    if resultat.bloque:
+        # Hors du bloc atomique : le signalement reste enregistré
+        raise MessageBloque(resultat)
     return message
 
 

@@ -125,6 +125,7 @@ class Message(models.Model):
     fichier = models.FileField(upload_to=chemin_piece_jointe, storage=stockage_prive, blank=True)
     nom_fichier = models.CharField(max_length=255, blank=True)
     taille_fichier = models.PositiveIntegerField(default=0)
+    signale = models.BooleanField(default=False, help_text="Signalé par la modération IA.")
     lu = models.BooleanField(default=False)
     date_envoi = models.DateTimeField(auto_now_add=True)
 
@@ -150,6 +151,38 @@ class Message(models.Model):
         if self.contenu:
             return self.contenu
         return f"📎 {self.nom_fichier}" if self.fichier else ""
+
+
+class Signalement(models.Model):
+    """Trace d'une décision de la modération IA (message bloqué ou signalé)."""
+
+    class Decision(models.TextChoices):
+        SIGNALE = "signale", "Signalé"
+        BLOQUE = "bloque", "Bloqué"
+
+    class Source(models.TextChoices):
+        GEMINI = "gemini", "IA Gemini"
+        REGLES = "regles", "Règles locales"
+
+    message = models.OneToOneField(Message, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name="signalement", help_text="Vide si le message a été bloqué.")
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="signalements")
+    auteur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="signalements")
+    contenu = models.TextField()
+    decision = models.CharField(max_length=10, choices=Decision.choices)
+    categorie = models.CharField(max_length=40)
+    raison = models.TextField(blank=True)
+    source = models.CharField(max_length=10, choices=Source.choices)
+    traite = models.BooleanField(default=False)
+    traite_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name="signalements_traites")
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["traite", "-date_creation"]
+
+    def __str__(self):
+        return f"{self.get_decision_display()} · {self.auteur} · {self.categorie}"
 
 
 class Rappel(models.Model):

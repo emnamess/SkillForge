@@ -171,3 +171,11 @@ PIECE_JOINTE_EXTENSIONS = [
 ]
 DATA_UPLOAD_MAX_MEMORY_SIZE = PIECE_JOINTE_TAILLE_MAX + 1024 * 1024
 
+
+# Modération IA des messages (Google Gemini)
+# Sans clé API, la modération se replie sur des règles locales.
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
+MODERATION_IA_ACTIVE = os.getenv("MODERATION_IA_ACTIVE", "True") == "True"
+MODERATION_TIMEOUT = int(os.getenv("MODERATION_TIMEOUT", "8"))  # secondes

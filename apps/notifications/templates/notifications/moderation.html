@@ -1,0 +1,85 @@
+{% extends "base_app.html" %}
+{% load humanize %}
+
+{% block title %}Modération{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Modération IA</h1>
+<p class="page-subtitle">
+    Messages bloqués ou signalés par l'IA.
+    {% if ia_active %}<span class="badge badge-green">Gemini actif</span>
+    {% else %}<span class="badge badge-orange">IA inactive · règles locales uniquement</span>{% endif %}
+</p>
+
+<div class="stats">
+    <div class="stat card stat-alert"><strong>{{ stats.a_traiter }}</strong><span>À traiter</span></div>
+    <div class="stat card"><strong>{{ stats.bloques }}</strong><span>Messages bloqués</span></div>
+    <div class="stat card"><strong>{{ stats.signales }}</strong><span>Messages signalés</span></div>
+    <div class="stat card"><strong>{{ stats.par_ia }}</strong><span>Détectés par Gemini</span></div>
+</div>
+
+<div class="onglets">
+    <a href="?filtre=a-traiter" class="onglet{% if filtre == 'a-traiter' %} actif{% endif %}">À traiter</a>
+    <a href="?filtre=traites" class="onglet{% if filtre == 'traites' %} actif{% endif %}">Traités</a>
+    <a href="?filtre=tous" class="onglet{% if filtre == 'tous' %} actif{% endif %}">Tous</a>
+</div>
+
+<div class="signalements">
+    {% for s in page %}
+        <article class="card signalement{% if s.traite %} traite{% endif %}">
+            <header class="signalement-entete">
+                <div class="user-cell">
+                    <span class="avatar">{{ s.auteur.initiales }}</span>
+                    <div>
+                        <strong>{{ s.auteur }}</strong>
+                        <small>{{ s.auteur.get_role_display }} · {{ s.date_creation|naturaltime }}
+                            {% if s.nb_signalements_auteur > 1 %} · <span class="recidive">{{ s.nb_signalements_auteur }} signalements</span>{% endif %}
+                        </small>
+                    </div>
+                </div>
+                <div class="signalement-badges">
+                    <span class="badge {% if s.decision == 'bloque' %}badge-rust{% else %}badge-orange{% endif %}">{{ s.get_decision_display }}</span>
+                    <span class="badge badge-indigo">{{ s.categorie|capfirst }}</span>
+                    <span class="badge badge-muted">{{ s.get_source_display }}</span>
+                </div>
+            </header>
+
+            <blockquote class="signalement-contenu">{{ s.contenu|linebreaksbr }}</blockquote>
+            {% if s.raison %}<p class="signalement-raison"><strong>Analyse :</strong> {{ s.raison }}</p>{% endif %}
+
+            {% if s.traite %}
+                <p class="muted signalement-pied">Traité par {{ s.traite_par|default:"un administrateur" }}.</p>
+            {% else %}
+                <div class="signalement-actions">
+                    <form method="post" action="{% url 'notifications:traiter_signalement' s.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        {% if s.message %}
+                            <button name="action" value="retablir" class="btn btn-sm btn-outline">Message acceptable</button>
+                            <button name="action" value="supprimer_message" class="btn btn-sm btn-outline">Supprimer le message</button>
+                        {% endif %}
+                        <button name="action" value="traite" class="btn btn-sm btn-primary">Marquer comme traité</button>
+                    </form>
+                    {% if s.auteur.is_active and s.auteur != user %}
+                        <form method="post" action="{% url 'accounts:basculer_actif' s.auteur.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <button class="btn btn-sm btn-danger">Désactiver l'auteur</button>
+                        </form>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </article>
+    {% empty %}
+        <div class="card"><p class="vide">Aucun signalement {% if filtre == 'a-traiter' %}à traiter{% endif %}. 🎉</p></div>
+    {% endfor %}
+</div>
+
+{% if page.has_other_pages %}
+<nav class="pagination">
+    {% if page.has_previous %}<a href="?filtre={{ filtre }}&page={{ page.previous_page_number }}" class="btn btn-sm btn-outline">Précédent</a>{% endif %}
+    <span>Page {{ page.number }} sur {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a href="?filtre={{ filtre }}&page={{ page.next_page_number }}" class="btn btn-sm btn-outline">Suivant</a>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}

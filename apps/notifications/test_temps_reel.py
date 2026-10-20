@@ -47,7 +47,7 @@ async def recevoir_types(communicator, types_attendus, essais=6):
     raise AssertionError(f"Types manquants : {types_attendus - recus.keys()}")
 
 
-@override_settings(CHANNEL_LAYERS={"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}})
+@override_settings(GEMINI_API_KEY="", CHANNEL_LAYERS={"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}})
 class TempsReelTests(TransactionTestCase):
     def setUp(self):
         cache.clear()
@@ -89,6 +89,16 @@ class TempsReelTests(TransactionTestCase):
 
         await ws_apprenant.disconnect()
         await ws_formateur.disconnect()
+
+    async def test_message_bloque_renvoie_une_erreur(self):
+        ws, _, _ = await connecter(self.chemin, self.apprenant)
+        await ws.send_json_to({"action": "envoyer", "contenu": "espèce de connard", "ref": "2"})
+        erreur = await recevoir_type(ws, "erreur")
+        self.assertTrue(erreur["bloque"])
+        self.assertEqual(erreur["ref"], "2")
+        existe = await database_sync_to_async(Message.objects.exists)()
+        self.assertFalse(existe)
+        await ws.disconnect()
 
     async def test_indicateur_en_train_d_ecrire(self):
         ws_apprenant, _, _ = await connecter(self.chemin, self.apprenant)

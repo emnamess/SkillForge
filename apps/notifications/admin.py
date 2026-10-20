@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Conversation, Message, Notification, Rappel
+from .models import Conversation, Message, Notification, Rappel, Signalement
 
 
 @admin.register(Notification)
@@ -14,7 +14,7 @@ class NotificationAdmin(admin.ModelAdmin):
 class MessageInline(admin.TabularInline):
     model = Message
     extra = 0
-    readonly_fields = ("expediteur", "contenu", "nom_fichier", "lu", "date_envoi")
+    readonly_fields = ("expediteur", "contenu", "nom_fichier", "signale", "lu", "date_envoi")
     exclude = ("fichier",)
     can_delete = False
 
@@ -32,3 +32,11 @@ class RappelAdmin(admin.ModelAdmin):
     list_filter = ("envoye", "par_email")
     search_fields = ("titre", "destinataire__email")
     raw_id_fields = ("destinataire",)
+
+
+@admin.register(Signalement)
+class SignalementAdmin(admin.ModelAdmin):
+    list_display = ("auteur", "decision", "categorie", "source", "traite", "date_creation")
+    list_filter = ("decision", "categorie", "source", "traite")
+    search_fields = ("contenu", "raison", "auteur__email")
+    raw_id_fields = ("auteur", "message", "traite_par", "conversation")

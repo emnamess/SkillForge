@@ -90,6 +90,7 @@ Pour tester rapidement les trois rôles, créer des comptes depuis `/comptes/ins
 | `/notifications/messagerie/` | Messagerie interne |
 | `/notifications/messagerie/nouvelle/?a=<id>` | Écrire à un utilisateur (destinataire présélectionné) |
 | `/notifications/messagerie/recherche/?q=...` | Recherche dans les messages |
+| `/notifications/moderation/` | Signalements de la modération IA (administrateur) |
 
 Règles de la messagerie : un apprenant peut écrire aux formateurs et aux administrateurs ; formateurs et administrateurs peuvent écrire à tout le monde.
 
@@ -144,6 +145,28 @@ messages instantanés, indicateur « en train d'écrire », statut en ligne et n
 - Bouton trombone dans une conversation : PDF, images, documents Office, code, archives… **10 Mo maximum**.
 - Les fichiers sont stockés dans `private_media/` (non versionné) et ne sont accessibles **qu'aux participants** de la conversation.
 - Champ de recherche au-dessus des conversations : cherche dans le texte des messages et les noms de fichiers.
+
+### Modération IA (Google Gemini)
+
+Chaque message est analysé par **Gemini** avant l'envoi :
+
+| Décision | Effet |
+|---|---|
+| Autorisé | Le message est envoyé normalement |
+| Signalé | Le message est envoyé mais marqué ; les administrateurs sont prévenus |
+| Bloqué | Le message n'est pas envoyé ; l'auteur voit la raison, les administrateurs sont prévenus |
+
+Les administrateurs traitent les signalements sur `/notifications/moderation/` (lien *Modération* dans le menu) :
+rétablir le message, le supprimer ou désactiver l'auteur.
+
+**Configuration** : créer une clé gratuite sur https://aistudio.google.com/apikey puis l'ajouter dans `.env` :
+
+```
+GEMINI_API_KEY=votre-cle
+```
+
+Sans clé (ou si l'API ne répond pas), la modération se replie automatiquement sur des **règles locales** (liste de mots,
+numéros de téléphone) : la messagerie continue de fonctionner. Les tests n'appellent jamais la vraie API.
 
 ### Envoyer les rappels
 

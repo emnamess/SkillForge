@@ -197,7 +197,7 @@
 
         const bloc = el("div");
         bloc.append(el("small", "bulle-meta", (m.moi ? "Vous" : m.auteur) + " " + m.heure));
-        const bulle = el("div", "bulle");
+        const bulle = el("div", "bulle" + (m.signale ? " bulle-signalee" : ""));
 
         if (m.fichier) {
             if (m.fichier.image) {
@@ -222,6 +222,7 @@
             }
         }
         if (m.contenu) bulle.append(el("div", "bulle-texte", m.contenu));
+        if (m.signale) bulle.append(el("small", "bulle-alerte", "Signalé à la modération"));
 
         bloc.append(bulle);
         ligne.append(el("span", "avatar avatar-sm", m.initiales), bloc);

@@ -3,7 +3,7 @@
     <span class="avatar avatar-sm">{{ m.expediteur.initiales }}</span>
     <div>
         <small class="bulle-meta">{% if m.expediteur_id == user.pk %}Vous{% else %}{{ m.expediteur }}{% endif %} {{ m.date_envoi|time:"H:i" }}</small>
-        <div class="bulle">
+        <div class="bulle{% if m.signale %} bulle-signalee{% endif %}">
             {% if m.fichier %}
                 {% if m.est_image %}
                     <a href="{{ m.url_fichier }}" target="_blank" rel="noopener" class="piece-image">
@@ -17,6 +17,7 @@
                 {% endif %}
             {% endif %}
             {% if m.contenu %}<div class="bulle-texte">{{ m.contenu|linebreaksbr }}</div>{% endif %}
+            {% if m.signale %}<small class="bulle-alerte">Signalé à la modération</small>{% endif %}
         </div>
     </div>
 </div>
