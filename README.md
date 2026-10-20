@@ -60,15 +60,21 @@ Il utilise automatiquement le Python du `venv` : **pas besoin d'activer l'enviro
 
 ### Comptes de démo
 
-`python run.py demo` crée des comptes prêts à l'emploi pour tester tous les rôles
-(mot de passe commun : `SkillForge2026!`) :
+`python run.py demo` crée des comptes prêts à l'emploi pour tester tous les rôles.
+On peut se connecter avec l'e-mail **ou** le nom d'utilisateur.
 
-| E-mail | Rôle |
-|---|---|
-| `admin@demo.skillforge.tn` | Administrateur (accès à `/admin/`) |
-| `karim@demo.skillforge.tn`, `leila@demo.skillforge.tn` | Formateurs validés |
-| `sami@demo.skillforge.tn` | Formateur en attente de validation |
-| `yasmine@demo.skillforge.tn`, `amine@demo.skillforge.tn`, `sarra@demo.skillforge.tn` | Apprenants |
+| Nom | E-mail | Nom d'utilisateur | Mot de passe | Rôle |
+|---|---|---|---|---|
+| Nadia Admin | `admin@demo.skillforge.tn` | `demo_admin` | `SkillForge2026!` | Administrateur (accès à `/admin/`) |
+| Karim Mansour | `karim@demo.skillforge.tn` | `demo_karim` | `SkillForge2026!` | Formateur · Modélisation UML |
+| Leïla Trabelsi | `leila@demo.skillforge.tn` | `demo_leila` | `SkillForge2026!` | Formateur · Bases de données |
+| Sami Rekik | `sami@demo.skillforge.tn` | `demo_sami` | `SkillForge2026!` | Formateur **en attente de validation** |
+| Yasmine Ben Ali | `yasmine@demo.skillforge.tn` | `demo_yasmine` | `SkillForge2026!` | Apprenante |
+| Amine Mejri | `amine@demo.skillforge.tn` | `demo_amine` | `SkillForge2026!` | Apprenant |
+| Sarra Khelifi | `sarra@demo.skillforge.tn` | `demo_sarra` | `SkillForge2026!` | Apprenante |
+
+> Ces comptes n'existent que sur votre machine, après `python run.py demo` (la commande refuse de tourner
+> hors développement). Ne réutilisez jamais ce mot de passe pour de vrais comptes.
 
 Ils arrivent avec des conversations, des notifications, un message signalé à modérer et un rappel de séance
 qui arrive 2 minutes après la création (si `python run.py dev` tourne). Pour tester le temps réel, ouvrir deux
