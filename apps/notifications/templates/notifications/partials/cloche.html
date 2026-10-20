@@ -1,0 +1,36 @@
+{% load humanize %}
+<div class="cloche" data-cloche data-api="{% url 'notifications:api_compteurs' %}">
+    <button type="button" class="cloche-bouton" aria-label="Notifications" aria-expanded="false" data-cloche-bouton>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+        </svg>
+        <span class="cloche-compteur" data-compteur-notifications {% if not nb_notifications_non_lues %}hidden{% endif %}>{{ nb_notifications_non_lues }}</span>
+    </button>
+
+    <div class="cloche-menu card" data-cloche-menu hidden>
+        <div class="cloche-entete">
+            <strong>Notifications</strong>
+            {% if nb_notifications_non_lues %}
+                <form method="post" action="{% url 'notifications:tout_marquer_lu' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button type="submit" class="lien-bouton">Tout marquer comme lu</button>
+                </form>
+            {% endif %}
+        </div>
+        {% for n in dernieres_notifications %}
+            <a href="{{ n.get_absolute_url }}" class="notif-item{% if not n.lue %} non-lue{% endif %}">
+                {% include "notifications/partials/icone.html" with type=n.type %}
+                <span class="notif-texte">
+                    <strong>{{ n.titre }}</strong>
+                    {% if n.message %}<span>{{ n.message|truncatechars:80 }}</span>{% endif %}
+                    <small>{{ n.date_creation|naturaltime }}</small>
+                </span>
+            </a>
+        {% empty %}
+            <p class="cloche-vide">Aucune notification pour le moment.</p>
+        {% endfor %}
+        <a href="{% url 'notifications:index' %}" class="cloche-tout">Voir toutes les notifications</a>
+    </div>
+</div>
