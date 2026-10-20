@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block body_class %}app{% endblock %}
+
+{% block layout %}
+<div class="app-layout">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="app-content">
+            {% include "partials/messages.html" %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+{% endblock %}

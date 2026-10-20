@@ -1,0 +1,17 @@
+<header class="navbar">
+    <a href="{% url 'home' %}" class="brand">
+        <span class="brand-logo">SF</span>
+        <span class="brand-name">SkillForge</span>
+    </a>
+    <nav class="navbar-links">
+        <a href="{% url 'courses:index' %}">Catalogue</a>
+        <a href="{% url 'mentoring:index' %}">Mentorat</a>
+    </nav>
+    <div class="navbar-actions">
+        {% if user.is_authenticated %}
+            <a href="{% url 'accounts:dashboard' %}" class="btn btn-primary">Mon espace</a>
+        {% else %}
+            <a href="{% url 'accounts:login' %}" class="btn btn-outline">Se connecter</a>
+        {% endif %}
+    </div>
+</header>

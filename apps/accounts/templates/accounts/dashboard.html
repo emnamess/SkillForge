@@ -1,0 +1,8 @@
+{% extends "base_app.html" %}
+
+{% block title %}Tableau de bord{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Bonjour, {{ user.first_name|default:user.username }}</h1>
+<p class="page-subtitle">Reprenez là où vous vous êtes arrêté.</p>
+{% endblock %}

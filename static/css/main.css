@@ -1,0 +1,222 @@
+/* ============ SkillForge — styles partagés ============ */
+
+:root {
+    --navy: #231f5c;
+    --navy-dark: #1b1848;
+    --indigo: #5546c0;
+    --indigo-soft: #eeecfb;
+    --orange: #f0a028;
+    --orange-soft: #fcefd9;
+    --green: #0f7155;
+    --green-soft: #e1f3ec;
+    --rust: #9b3a1e;
+    --rust-soft: #fbece6;
+    --pink: #d4527d;
+    --cream: #f4f1ea;
+    --white: #ffffff;
+    --text: #1f1d3a;
+    --muted: #6b6a7d;
+    --border: #e4e1d8;
+    --radius: 12px;
+    --font-title: "Poppins", sans-serif;
+    --font-body: "Inter", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: var(--font-body);
+    color: var(--text);
+    background: var(--cream);
+}
+
+a { color: var(--indigo); text-decoration: none; }
+
+h1, h2, h3 { font-family: var(--font-title); color: var(--navy); }
+
+/* ---------- Composants ---------- */
+
+.btn {
+    display: inline-block;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    font: 600 0.95rem var(--font-body);
+    cursor: pointer;
+}
+.btn-primary { background: var(--indigo); color: var(--white); }
+.btn-primary:hover { background: var(--navy); }
+.btn-outline { background: var(--white); color: var(--navy); border-color: var(--border); }
+.btn-orange { background: var(--orange); color: var(--navy-dark); }
+.btn-block { display: block; width: 100%; }
+
+.card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+.badge-indigo { background: var(--indigo-soft); color: var(--indigo); }
+.badge-orange { background: var(--orange-soft); color: #8a5a10; }
+.badge-green { background: var(--green-soft); color: var(--green); }
+.badge-rust { background: var(--rust-soft); color: var(--rust); }
+
+.page-title { margin: 0 0 0.25rem; font-size: 1.8rem; }
+.page-subtitle { margin: 0 0 1.5rem; color: var(--muted); }
+
+.form label { display: block; margin: 1rem 0 0.35rem; font-weight: 500; font-size: 0.9rem; }
+.form input, .form select, .form textarea {
+    width: 100%;
+    padding: 0.65rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font: inherit;
+}
+.form button { margin-top: 1.5rem; }
+
+.messages { margin-bottom: 1rem; }
+.alert { padding: 0.8rem 1rem; border-radius: 8px; margin-bottom: 0.5rem; }
+.alert-success { background: var(--green-soft); color: var(--green); }
+.alert-error { background: var(--rust-soft); color: var(--rust); }
+.alert-info { background: var(--indigo-soft); color: var(--indigo); }
+.alert-warning { background: var(--orange-soft); color: #8a5a10; }
+
+.brand { display: flex; align-items: center; gap: 0.6rem; }
+.brand-logo {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--orange);
+    color: var(--navy-dark);
+    font: 700 0.85rem var(--font-title);
+}
+.brand-name { font: 700 1.1rem var(--font-title); color: var(--navy); }
+.brand-light .brand-name { color: var(--white); }
+
+.avatar {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--indigo-soft);
+    color: var(--indigo);
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+/* ---------- Pages publiques ---------- */
+
+.navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 3rem;
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+}
+.navbar-links { display: flex; gap: 2rem; }
+.navbar-links a { color: var(--muted); font-weight: 500; }
+.navbar-links a:hover { color: var(--indigo); }
+
+.hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 3rem;
+    padding: 3.5rem 3rem;
+    background: var(--navy);
+    color: var(--white);
+}
+.hero h1 { color: var(--white); font-size: 2.4rem; max-width: 640px; margin: 1rem 0; }
+.hero p { color: #d8d6f0; max-width: 560px; }
+.hero-search { flex: 0 0 380px; }
+.hero-search label { display: block; font-weight: 600; margin-bottom: 0.6rem; }
+.hero-search input { width: 100%; padding: 0.8rem 1rem; border: none; border-radius: 8px; font: inherit; }
+
+.auth-card { max-width: 420px; margin: 4rem auto; }
+
+/* ---------- Espace connecté ---------- */
+
+.app-layout { display: flex; min-height: 100vh; }
+
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 240px;
+    padding: 1.5rem 1rem;
+    background: var(--navy);
+}
+.sidebar .brand { padding: 0 0.5rem 2rem; }
+.sidebar-nav { display: flex; flex-direction: column; gap: 0.25rem; }
+.sidebar-nav a {
+    padding: 0.7rem 0.9rem;
+    border-radius: 8px;
+    color: #d8d6f0;
+    font-weight: 500;
+}
+.sidebar-nav a:hover { background: rgba(255, 255, 255, 0.08); }
+.sidebar-nav a.active { background: var(--indigo); color: var(--white); }
+.sidebar-footer { margin-top: auto; }
+.sidebar-logout {
+    width: 100%;
+    padding: 0.7rem 0.9rem;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #d8d6f0;
+    font: 500 0.95rem var(--font-body);
+    text-align: left;
+    cursor: pointer;
+}
+.sidebar-logout:hover { background: rgba(255, 255, 255, 0.08); }
+
+.app-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 2rem;
+}
+.search input {
+    width: 320px;
+    max-width: 100%;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--white);
+    font: inherit;
+}
+.topbar-right { display: flex; align-items: center; gap: 1rem; }
+.user-chip { display: flex; align-items: center; gap: 0.6rem; }
+.user-chip-text { display: flex; flex-direction: column; line-height: 1.2; }
+.user-chip-text small { color: var(--muted); }
+
+.app-content { padding: 1rem 2rem 2rem; }
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 860px) {
+    .navbar, .hero { padding-left: 16px; padding-right: 16px; }
+    .navbar-links { display: none; }
+    .hero { flex-direction: column; align-items: stretch; }
+    .hero-search { flex: none; }
+    .app-layout { flex-direction: column; }
+    .sidebar { width: 100%; }
+    .sidebar-nav { flex-direction: row; flex-wrap: wrap; }
+    .topbar, .app-content { padding-left: 16px; padding-right: 16px; }
+    .user-chip-text { display: none; }
+}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Accueil{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-text">
+        <span class="badge badge-orange">Quiz corrigés par l'IA</span>
+        <h1>Apprenez à votre rythme, accompagné par l'IA et de vrais formateurs.</h1>
+        <p>Des modules pas à pas, des quiz corrigés instantanément et des séances de mentorat en direct.</p>
+    </div>
+    <form class="hero-search" action="{% url 'courses:index' %}" method="get">
+        <label for="q">Que voulez-vous apprendre ?</label>
+        <input id="q" type="search" name="q" placeholder="Ex. SQL, UML, pipelines de données...">
+    </form>
+</section>
+{% endblock %}
