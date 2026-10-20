@@ -11,38 +11,48 @@
             {% with autre=conversation.interlocuteur_courant %}
             <header class="discussion-entete">
                 <a href="{% url 'notifications:messagerie' %}" class="retour-mobile" aria-label="Retour aux conversations">←</a>
-                <span class="avatar">{{ autre.initiales }}</span>
+                <span class="avatar avatar-statut">
+                    {{ autre.initiales }}
+                    <span class="point-statut{% if conversation.interlocuteur_en_ligne %} en-ligne{% endif %}" data-point-statut></span>
+                </span>
                 <div>
                     <strong>{{ autre }}</strong>
-                    <small>{{ autre.get_role_display }}{% if autre.specialite %} · {{ autre.specialite }}{% endif %}</small>
+                    <small>
+                        <span data-statut>{% if conversation.interlocuteur_en_ligne %}En ligne{% else %}Hors ligne{% endif %}</span>
+                        · {{ autre.get_role_display }}{% if autre.specialite %} · {{ autre.specialite }}{% endif %}
+                    </small>
                 </div>
             </header>
 
             <div class="discussion-messages" data-discussion
+                 data-ws="/ws/messagerie/{{ conversation.pk }}/"
                  data-api="{% url 'notifications:api_messages' conversation.pk %}"
                  data-dernier="{{ messages_conversation.last.pk|default:0 }}">
                 {% for m in messages_conversation %}
                     {% ifchanged m.date_envoi.date %}
                         <div class="separateur-date">{{ m.date_envoi|date:"l j F" }}</div>
                     {% endifchanged %}
-                    <div class="bulle-ligne{% if m.expediteur == user %} moi{% endif %}">
-                        <span class="avatar avatar-sm">{{ m.expediteur.initiales }}</span>
-                        <div>
-                            <small class="bulle-meta">{% if m.expediteur == user %}Vous{% else %}{{ m.expediteur }}{% endif %} {{ m.date_envoi|time:"H:i" }}</small>
-                            <div class="bulle">{{ m.contenu|linebreaksbr }}</div>
-                        </div>
-                    </div>
+                    {% include "notifications/partials/message.html" %}
                 {% endfor %}
+            </div>
+
+            <div class="ecrit-indicateur" data-ecrit hidden>
+                <span class="points"><i></i><i></i><i></i></span> <span data-ecrit-texte></span>
+            </div>
+
+            <div class="alerte-envoi" data-alerte-envoi hidden role="alert">
+                <strong>Message non envoyé</strong>
+                <span data-alerte-texte></span>
+                <button type="button" class="bouton-icone" data-alerte-fermer aria-label="Fermer">×</button>
             </div>
 
             <form method="post" class="discussion-saisie" data-saisie>
                 {% csrf_token %}
                 {{ form.contenu }}
-                <button type="submit" class="btn btn-primary bouton-envoyer" aria-label="Envoyer">
+                <button type="submit" class="btn btn-primary bouton-envoyer" aria-label="Envoyer" data-envoyer>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>
                 </button>
             </form>
-            {% for error in form.contenu.errors %}<small class="error">{{ error }}</small>{% endfor %}
             {% endwith %}
         {% else %}
             <div class="discussion-vide">

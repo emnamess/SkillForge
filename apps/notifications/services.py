@@ -1,5 +1,7 @@
 """API du module notifications, à utiliser depuis les autres apps.
 
+Les notifications créées ici arrivent instantanément dans le navigateur (WebSockets).
+
     from apps.notifications.services import notifier, planifier_rappels_seance, annuler_rappels
     from apps.notifications.models import Notification
 
@@ -17,12 +19,13 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.mail import send_mail
 from django.db import transaction
 from django.utils import timezone
 from django.utils.formats import date_format
 
+from . import realtime
 from .models import Conversation, Message, Notification, Rappel
 
 logger = logging.getLogger(__name__)
@@ -41,8 +44,9 @@ def notifier(destinataires, titre, message="", *, type=Notification.Type.SYSTEME
         Notification(destinataire=u, type=type, titre=titre, message=message, lien=lien)
         for u in destinataires if u.is_active
     ])
-    if email:
-        for n in notifications:
+    for n in notifications:
+        realtime.pousser_notification(n)
+        if email:
             envoyer_email(n.destinataire, titre, message, lien)
     return notifications
 
@@ -61,7 +65,9 @@ def envoyer_email(user, sujet, message, lien=""):
 
 
 def marquer_toutes_lues(user):
-    return user.notifications.filter(lue=False).update(lue=True)
+    n = user.notifications.filter(lue=False).update(lue=True)
+    realtime.pousser_compteurs(user)
+    return n
 
 
 # ---------- Messagerie ----------
@@ -93,22 +99,34 @@ def obtenir_conversation(user_a, user_b):
     return conversation
 
 
-@transaction.atomic
 def envoyer_message(conversation, expediteur, contenu):
+    """Envoie un message et le diffuse en temps réel."""
+    contenu = (contenu or "").strip()
     if not conversation.participants.filter(pk=expediteur.pk).exists():
         raise PermissionDenied("Vous ne participez pas à cette conversation.")
+    if not contenu:
+        raise ValidationError("Le message est vide.")
 
-    message = Message.objects.create(conversation=conversation, expediteur=expediteur, contenu=contenu)
-    conversation.save(update_fields=["date_maj"])
+    with transaction.atomic():
+        message = Message.objects.create(conversation=conversation, expediteur=expediteur, contenu=contenu)
+        conversation.save(update_fields=["date_maj"])
 
-    # Une seule notification non lue par conversation, pour ne pas inonder la cloche
-    destinataire = conversation.interlocuteur(expediteur)
-    lien = conversation.get_absolute_url()
-    if destinataire and not destinataire.notifications.filter(lue=False, type=Notification.Type.MESSAGE,
-                                                              lien=lien).exists():
-        notifier(destinataire, f"Nouveau message de {expediteur}", contenu[:120],
-                 type=Notification.Type.MESSAGE, lien=lien)
+        realtime.diffuser_message(message)
+        _notifier_destinataire(conversation, expediteur, message)
     return message
+
+
+def _notifier_destinataire(conversation, expediteur, message):
+    """Une seule notification non lue par conversation, pour ne pas inonder la cloche."""
+    destinataire = conversation.interlocuteur(expediteur)
+    if destinataire is None:
+        return
+    lien = conversation.get_absolute_url()
+    if destinataire.notifications.filter(lue=False, type=Notification.Type.MESSAGE, lien=lien).exists():
+        realtime.pousser_compteurs(destinataire)
+    else:
+        notifier(destinataire, f"Nouveau message de {expediteur}", message.contenu[:120],
+                 type=Notification.Type.MESSAGE, lien=lien)
 
 
 def messages_non_lus(user):

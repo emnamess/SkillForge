@@ -126,6 +126,18 @@ Bouton « Poser une question au formateur » :
 </a>
 ```
 
+### Temps réel (WebSockets)
+
+La messagerie et la cloche fonctionnent en temps réel grâce à **Django Channels** :
+messages instantanés, indicateur « en train d'écrire », statut en ligne et notifications en direct (toasts).
+
+- Rien à lancer en plus : `python manage.py runserver` démarre **Daphne** (serveur ASGI) qui gère HTTP et WebSockets.
+  Le terminal affiche les lignes `WebSocket CONNECT ...`.
+- Les notifications créées avec `notifier(...)` arrivent automatiquement en direct, aucun code à ajouter.
+- Si le WebSocket est coupé, la page se rabat toute seule sur une actualisation périodique.
+- Un module qui a besoin de ses propres WebSockets (ex. signalisation des appels vidéo du mentorat) ajoute ses routes dans `config/asgi.py`.
+- En production avec plusieurs processus, installer `channels-redis` et définir `REDIS_URL` dans `.env`.
+
 ### Envoyer les rappels
 
 Les rappels programmés sont envoyés par la commande `envoyer_rappels` :

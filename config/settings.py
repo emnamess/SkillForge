@@ -42,7 +42,12 @@ LOCAL_APPS = [
     "apps.notifications",  # Emna Messaoudi — notifications et messagerie
 ]
 
-INSTALLED_APPS = DJANGO_APPS + LOCAL_APPS
+THIRD_PARTY_APPS = [
+    "channels",
+]
+
+# daphne doit précéder staticfiles : `runserver` sert alors HTTP et WebSockets (ASGI)
+INSTALLED_APPS = ["daphne"] + DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -73,6 +78,23 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "config.wsgi.application"
+ASGI_APPLICATION = "config.asgi.application"
+
+
+# Temps réel (Django Channels)
+# Sans REDIS_URL, une couche en mémoire suffit pour le développement (un seul processus).
+
+REDIS_URL = os.getenv("REDIS_URL")
+
+if REDIS_URL:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {"hosts": [REDIS_URL]},
+        }
+    }
+else:
+    CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
 
 
 # Base de données
@@ -133,3 +155,5 @@ DEFAULT_FROM_EMAIL = os.getenv("DJANGO_DEFAULT_FROM_EMAIL", "SkillForge <noreply
 
 # Adresse du site, utilisée pour les liens dans les e-mails de notification
 SITE_URL = os.getenv("DJANGO_SITE_URL", "http://127.0.0.1:8000")
+
+

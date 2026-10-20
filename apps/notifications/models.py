@@ -71,7 +71,11 @@ class Conversation(models.Model):
         return self.messages.filter(lu=False).exclude(expediteur=user)
 
     def marquer_lue(self, user):
-        self.non_lus(user).update(lu=True)
+        """Marque les messages reçus comme lus, ainsi que la notification associée."""
+        n = self.non_lus(user).update(lu=True)
+        user.notifications.filter(type=Notification.Type.MESSAGE, lien=self.get_absolute_url(),
+                                  lue=False).update(lue=True)
+        return n
 
 
 class Message(models.Model):

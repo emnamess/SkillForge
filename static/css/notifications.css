@@ -284,6 +284,120 @@
 }
 .nouveau-message { padding: 0 1.25rem 1.25rem; }
 
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+.btn-danger { background: var(--rust); color: var(--white); }
+.btn-danger:hover { background: #7d2e17; }
+
+/* ---------- Toasts (notifications en temps réel) ---------- */
+
+.toasts {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 340px;
+    max-width: calc(100vw - 32px);
+}
+.toast {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.85rem 1rem;
+    border-left: 4px solid var(--indigo);
+    border-radius: 10px;
+    background: var(--white);
+    color: var(--text);
+    box-shadow: 0 10px 30px rgba(35, 31, 92, 0.18);
+    animation: toast-entree 0.25s ease-out;
+    transition: opacity 0.5s, transform 0.5s;
+}
+.toast strong { color: var(--navy); font-size: 0.92rem; }
+.toast span { color: var(--muted); font-size: 0.85rem; }
+.toast.sortie { opacity: 0; transform: translateX(20px); }
+@keyframes toast-entree {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: none; }
+}
+.notif-point { width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
+
+/* ---------- Présence et « en train d'écrire » ---------- */
+
+.avatar-statut { position: relative; }
+.point-statut {
+    position: absolute;
+    right: -1px;
+    bottom: -1px;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--white);
+    border-radius: 50%;
+    background: #b9b7c6;
+}
+.point-statut.en-ligne { background: #22a06b; }
+
+.ecrit-indicateur {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 1.25rem 0.5rem;
+    color: var(--muted);
+    font-size: 0.82rem;
+}
+.ecrit-indicateur[hidden] { display: none; }
+.points { display: inline-flex; gap: 3px; }
+.points i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--indigo);
+    animation: rebond 1.2s infinite ease-in-out;
+}
+.points i:nth-child(2) { animation-delay: 0.15s; }
+.points i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes rebond {
+    0%, 60%, 100% { opacity: 0.3; transform: none; }
+    30% { opacity: 1; transform: translateY(-3px); }
+}
+
+/* ---------- Envoi ---------- */
+
+.discussion-saisie.en-analyse { position: relative; }
+.discussion-saisie.en-analyse::after {
+    content: "Envoi en cours…";
+    position: absolute;
+    top: -1.4rem;
+    right: 1.25rem;
+    color: var(--indigo);
+    font-size: 0.78rem;
+}
+.discussion-saisie.en-analyse textarea { opacity: 0.6; }
+.bouton-envoyer:disabled { opacity: 0.6; cursor: wait; }
+
+.alerte-envoi {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0 1.25rem 0.5rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 10px;
+    background: var(--rust-soft);
+    color: var(--rust);
+    font-size: 0.88rem;
+}
+.alerte-envoi[hidden] { display: none; }
+.alerte-envoi span { flex: 1; }
+.bulle-ligne.surbrillance .bulle { outline: 2px solid var(--orange); }
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 860px) {

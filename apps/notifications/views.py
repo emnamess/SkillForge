@@ -4,17 +4,16 @@ from django.core.paginator import Paginator
 from django.db.models import Count, OuterRef, Prefetch, Q, Subquery
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.formats import date_format
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.utils.timezone import localtime
 from django.views.decorators.http import require_GET, require_POST
 
 from apps.accounts.models import User
 
 from .forms import MessageForm, NouvelleConversationForm
 from .models import Conversation, Message
-from .services import (envoyer_message, marquer_toutes_lues, messages_non_lus, obtenir_conversation,
-                       peut_ecrire_a)
+from .realtime import est_en_ligne, message_en_dict
+from .services import (envoyer_message, marquer_toutes_lues, messages_non_lus,
+                       obtenir_conversation, peut_ecrire_a)
 
 
 def rediriger_vers_suivant(request, defaut):
@@ -110,6 +109,7 @@ def messagerie(request, pk=None):
 
         conversation.marquer_lue(request.user)
         conversation.interlocuteur_courant = interlocuteur
+        conversation.interlocuteur_en_ligne = interlocuteur and est_en_ligne(interlocuteur.pk)
 
     return render(request, "notifications/messagerie.html", {
         "conversations": conversations,
@@ -151,11 +151,6 @@ def api_messages(request, pk):
     nouveaux = conversation.messages.filter(pk__gt=int(apres) if apres.isdigit() else 0).select_related(
         "expediteur")
     conversation.marquer_lue(request.user)
-    return JsonResponse({"messages": [{
-        "id": m.pk,
-        "contenu": m.contenu,
-        "auteur": "Vous" if m.expediteur_id == request.user.pk else str(m.expediteur),
-        "initiales": m.expediteur.initiales,
-        "moi": m.expediteur_id == request.user.pk,
-        "heure": date_format(localtime(m.date_envoi), "H:i"),
-    } for m in nouveaux]})
+    return JsonResponse({"messages": [
+        {**message_en_dict(m), "moi": m.expediteur_id == request.user.pk} for m in nouveaux
+    ]})

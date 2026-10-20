@@ -1,0 +1,9 @@
+<div class="bulle-ligne{% if m.expediteur_id == user.pk %} moi{% endif %}" id="message-{{ m.pk }}" data-message-id="{{ m.pk }}">
+    <span class="avatar avatar-sm">{{ m.expediteur.initiales }}</span>
+    <div>
+        <small class="bulle-meta">{% if m.expediteur_id == user.pk %}Vous{% else %}{{ m.expediteur }}{% endif %} {{ m.date_envoi|time:"H:i" }}</small>
+        <div class="bulle">
+            {% if m.contenu %}<div class="bulle-texte">{{ m.contenu|linebreaksbr }}</div>{% endif %}
+        </div>
+    </div>
+</div>
