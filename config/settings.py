@@ -5,6 +5,7 @@ Les valeurs sensibles sont lues depuis le fichier .env (voir .env.example).
 """
 
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -176,6 +177,44 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = PIECE_JOINTE_TAILLE_MAX + 1024 * 1024
 # Sans clé API, la modération se replie sur des règles locales.
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+# Niveau de réflexion du modèle (minimal, low, medium, high) ; vide pour la valeur par défaut du modèle
+GEMINI_REFLEXION = os.getenv("GEMINI_REFLEXION", "minimal").upper() or None
 MODERATION_IA_ACTIVE = os.getenv("MODERATION_IA_ACTIVE", "True") == "True"
-MODERATION_TIMEOUT = int(os.getenv("MODERATION_TIMEOUT", "8"))  # secondes
+MODERATION_TIMEOUT = max(10, int(os.getenv("MODERATION_TIMEOUT", "15")))  # secondes (minimum imposé par l'API : 10)
+
+
+# Journaux : chaque décision de modération (Gemini, cache ou règles locales)
+# s'affiche dans la console et est écrite dans logs/moderation.log
+
+TESTS_EN_COURS = len(sys.argv) > 1 and sys.argv[1] == "test"
+
+LOGS_DIR = BASE_DIR / "logs"
+LOGS_DIR.mkdir(exist_ok=True)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "moderation": {"format": "{asctime} [Modération] {message}", "style": "{", "datefmt": "%d/%m %H:%M:%S"},
+    },
+    "handlers": {
+        "console_moderation": {"class": "logging.StreamHandler", "formatter": "moderation"},
+        "fichier_moderation": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": LOGS_DIR / "moderation.log",
+            "maxBytes": 1024 * 1024,
+            "backupCount": 3,
+            "encoding": "utf-8",
+            "formatter": "moderation",
+        },
+    },
+    "loggers": {
+        "apps.notifications.moderation": {
+            # Pendant les tests, rien n'est affiché ni écrit (le journal reste une preuve fiable)
+            "handlers": [] if TESTS_EN_COURS else ["console_moderation", "fichier_moderation"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}

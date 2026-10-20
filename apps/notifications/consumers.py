@@ -108,6 +108,7 @@ class ConversationConsumer(AsyncJsonWebsocketConsumer):
         except MessageBloque as e:
             await self.send_json({"type": "erreur", "ref": ref, "bloque": True,
                                   "categorie": e.resultat.libelle_categorie,
+                                  "source": e.resultat.libelle_source,
                                   "message": e.resultat.raison or "Message refusé par la modération."})
         except (ValidationError, PermissionDenied) as e:
             message = e.messages[0] if isinstance(e, ValidationError) else str(e)

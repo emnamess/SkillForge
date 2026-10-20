@@ -276,7 +276,8 @@
             } else if (d.type === "erreur" && d.ref === refEnCours) {
                 refEnCours = null;
                 attente(false);
-                montrerAlerte(d.message);  // le texte reste dans la zone de saisie pour être corrigé
+                // le texte reste dans la zone de saisie pour être corrigé
+                montrerAlerte(d.message + (d.source ? " (détecté par : " + d.source + ")" : ""));
             } else if (d.type === "ecrit") {
                 montrerEcrit(d.nom);
             } else if (d.type === "presence") {

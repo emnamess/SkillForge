@@ -68,14 +68,42 @@ class GeminiTests(TestCase):
         self.assertEqual((r.decision, r.source), ("bloque", "gemini"))
 
     @mock.patch("apps.notifications.moderation.moderer_par_gemini")
-    def test_insulte_evidente_bloquee_sans_appeler_l_ia(self, gemini):
-        self.assertTrue(moderer("connard").bloque)
-        gemini.assert_not_called()
+    def test_gemini_decide_meme_pour_une_insulte_evidente(self, gemini):
+        gemini.return_value = ResultatModeration("bloque", "insulte", "Insulte.", "gemini")
+        r = moderer("connard")
+        gemini.assert_called_once()
+        self.assertEqual(r.source, "gemini")
 
     @mock.patch("apps.notifications.moderation.moderer_par_gemini", side_effect=TimeoutError)
     def test_repli_sur_les_regles_si_gemini_echoue(self, gemini):
         r = moderer("Bonjour")
         self.assertEqual((r.decision, r.source), ("autorise", "regles"))
+        self.assertTrue(moderer("connard").bloque)  # les règles locales protègent quand même
+
+    @mock.patch("apps.notifications.moderation.moderer_par_gemini")
+    def test_chaque_decision_est_journalisee_avec_sa_source(self, gemini):
+        gemini.return_value = ResultatModeration("bloque", "insulte", "Insulte.", "gemini")
+        with self.assertLogs("apps.notifications.moderation", "INFO") as journal:
+            moderer("you are useless")
+            moderer("you are useless")
+        self.assertIn("GEMINI   BLOQUE", journal.output[0])
+        self.assertIn("CACHE    BLOQUE", journal.output[1])
+
+    @mock.patch("apps.notifications.moderation.moderer_par_gemini")
+    def test_pause_quand_le_quota_est_depasse(self, gemini):
+        quota = Exception("429 RESOURCE_EXHAUSTED. Please retry in 25.6s.")
+        quota.code = 429
+        gemini.side_effect = quota
+        with self.assertLogs("apps.notifications.moderation", "WARNING") as journal:
+            moderer("Bonjour")
+            moderer("Salut")  # pendant la pause, Gemini n'est plus appelé
+        self.assertEqual(gemini.call_count, 1)
+        self.assertTrue(any("pause de 26 s" in ligne for ligne in journal.output))
+
+    def test_client_gemini_conserve(self):
+        # Un client recréé (et détruit) à chaque appel fermait sa connexion avant la requête
+        from .moderation import _client_gemini
+        self.assertIs(_client_gemini(), _client_gemini())
 
     @mock.patch("apps.notifications.moderation.moderer_par_gemini")
     def test_resultat_mis_en_cache(self, gemini):

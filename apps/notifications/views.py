@@ -118,7 +118,8 @@ def messagerie(request, pk=None):
                     message = envoyer_message(conversation, request.user, form.cleaned_data["contenu"],
                                               form.cleaned_data["fichier"])
                 except MessageBloque as e:
-                    erreur = f"Message bloqué par la modération : {e.resultat.raison}"
+                    erreur = (f"Message bloqué par la modération : {e.resultat.raison} "
+                              f"(détecté par : {e.resultat.libelle_source})")
                 except ValidationError as e:
                     erreur = e.messages[0]
                 else:
@@ -190,7 +191,8 @@ def nouvelle_conversation(request):
             try:
                 envoyer_message(conversation, request.user, form.cleaned_data["contenu"])
             except MessageBloque as e:
-                form.add_error("contenu", f"Message bloqué par la modération : {e.resultat.raison}")
+                form.add_error("contenu", f"Message bloqué par la modération : {e.resultat.raison} "
+                                          f"(détecté par : {e.resultat.libelle_source})")
             else:
                 return redirect(conversation)
 

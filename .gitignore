@@ -15,6 +15,7 @@ media/
 private_media/
 staticfiles/
 *.log
+logs/
 
 # Secrets
 .env

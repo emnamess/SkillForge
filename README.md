@@ -51,6 +51,8 @@ Il utilise automatiquement le Python du `venv` : **pas besoin d'activer l'enviro
 | `python run.py update` | Met à jour après un `git pull` fait à la main |
 | `python run.py demo` | Crée des comptes de démo avec des conversations (voir ci-dessous) |
 | `python run.py demo --reinitialiser` | Supprime puis recrée les données de démo |
+| `python run.py moderation "texte"` | Compare la décision de Gemini et des règles locales (vérifie la clé API) |
+| `python run.py logs` | Affiche les dernières décisions de modération |
 | `python run.py superuser` | Crée un compte administrateur |
 | `python run.py shell` | Ouvre un shell Python avec Django chargé |
 | `python run.py rappels` | Envoie les rappels de séances dus |
@@ -183,8 +185,29 @@ rétablir le message, le supprimer ou désactiver l'auteur.
 GEMINI_API_KEY=votre-cle
 ```
 
-Sans clé (ou si l'API ne répond pas), la modération se replie automatiquement sur des **règles locales** (liste de mots,
-numéros de téléphone) : la messagerie continue de fonctionner. Les tests n'appellent jamais la vraie API.
+**Qui décide ?** Gemini analyse chaque message. Les **règles locales** (listes de mots en français, anglais et darija,
+contournements comme « m3rde » ou « f u c k », numéros de téléphone) ne servent que de secours : sans clé API,
+si Gemini est en panne ou lent, ou quand le quota gratuit est dépassé. La messagerie continue donc toujours de fonctionner.
+Les tests n'appellent jamais la vraie API.
+
+**Journal des décisions** : chaque message analysé est tracé dans le terminal de `runserver` et dans `logs/moderation.log`
+(non versionné). La première colonne indique qui a décidé :
+
+```
+20/10 20:34:21 [Modération] GEMINI   BLOQUE    harcelement  4422 ms  « personne ne veut de toi ici »  → Les attaques…
+20/10 20:34:30 [Modération] CACHE    BLOQUE    harcelement     0 ms  « personne ne veut de toi ici »  → Les attaques…
+20/10 20:35:02 [Modération] Quota Gemini dépassé : pause de 26 s, règles locales en attendant
+20/10 20:35:02 [Modération] REGLES   AUTORISE  aucune          0 ms  « merci »
+```
+
+- `GEMINI` : décision de l'IA · `CACHE` : message identique déjà analysé par l'IA (24 h) · `REGLES` : secours local
+- Une ligne d'avertissement explique toujours pourquoi les règles ont pris le relais.
+- Le bandeau « Message non envoyé » et la page Modération indiquent aussi la source (IA Gemini ou règles locales).
+
+**Quota gratuit** : l'offre gratuite de Gemini limite le nombre de requêtes (environ 5 par minute et par modèle).
+Au-delà, SkillForge fait une pause du délai indiqué par Google puis reprend automatiquement. Réglages possibles dans `.env` :
+`GEMINI_MODEL` (défaut `gemini-3.5-flash`), `GEMINI_REFLEXION` (défaut `minimal`, réponse en ~1 s), `MODERATION_TIMEOUT`
+(défaut 15 s, minimum 10 s).
 
 ### Envoyer les rappels
 

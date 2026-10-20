@@ -5,10 +5,12 @@
 """
 
 import enum
+import functools
 import hashlib
 import json
 import logging
 import re
+import time
 import unicodedata
 from dataclasses import dataclass
 
@@ -35,6 +37,9 @@ Classe le message reçu :
   demande de triche (réponses d'un quiz, faire l'examen à sa place), lien suspect.
 - "bloque" : message clairement inacceptable : insultes directes, harcèlement, menaces,
   propos haineux ou discriminatoires, contenu sexuel, spam publicitaire ou arnaque.
+  Une attaque contre une personne est une insulte directe même sans gros mot
+  (« tu es nul », « t'es inutile », « you are useless », « personne ne t'aime ») : bloque-la.
+  Critiquer un cours ou un exercice n'est pas une insulte (« ce module est nul » est autorisé).
 
 Choisis la catégorie principale. La raison doit tenir en une phrase courte en français,
 adressée à l'auteur du message, sans répéter les mots injurieux.
@@ -97,6 +102,10 @@ class ResultatModeration:
     @property
     def bloque(self):
         return self.decision == BLOQUE
+
+    @property
+    def libelle_source(self):
+        return "IA Gemini" if self.source == "gemini" else "règles locales"
 
     @property
     def libelle_categorie(self):
@@ -182,13 +191,20 @@ def moderer_par_regles(texte):
 # ---------- Gemini ----------
 
 def _client_gemini():
+    """Client Gemini partagé.
+
+    Il doit rester référencé : si l'objet Client est détruit, le SDK ferme sa connexion HTTP
+    (« Cannot send a request, as the client has been closed »).
+    """
+    return _client_pour(settings.GEMINI_API_KEY, settings.MODERATION_TIMEOUT)
+
+
+@functools.lru_cache(maxsize=1)
+def _client_pour(cle_api, timeout):
     from google import genai
     from google.genai import types
 
-    return genai.Client(
-        api_key=settings.GEMINI_API_KEY,
-        http_options=types.HttpOptions(timeout=settings.MODERATION_TIMEOUT * 1000),
-    )
+    return genai.Client(api_key=cle_api, http_options=types.HttpOptions(timeout=timeout * 1000))
 
 
 def moderer_par_gemini(texte):
@@ -215,6 +231,9 @@ def moderer_par_gemini(texte):
             response_schema=AnalyseModeration,
             temperature=0,
             safety_settings=securite,
+            # Une classification n'a pas besoin de « réfléchir » : réponse en ~1 s au lieu de 5 à 15 s
+            thinking_config=types.ThinkingConfig(thinking_level=settings.GEMINI_REFLEXION)
+            if settings.GEMINI_REFLEXION else None,
         ),
     )
     analyse = reponse.parsed
@@ -229,27 +248,75 @@ def ia_disponible():
     return settings.MODERATION_IA_ACTIVE and bool(settings.GEMINI_API_KEY)
 
 
+CLE_PAUSE_QUOTA = "moderation:pause-quota"
+
+
+def _delai_avant_reessai(erreur, defaut=30):
+    """Lit le « retry in 25.6s » renvoyé par Google en cas de quota dépassé."""
+    trouve = re.search(r"retry in ([\d.]+)s", str(erreur))
+    return min(int(float(trouve.group(1))) + 1, 120) if trouve else defaut
+
+
+def _resume_erreur(erreur):
+    """« ServerError 503 UNAVAILABLE : This model is currently experiencing high demand. »"""
+    code, statut = getattr(erreur, "code", None), getattr(erreur, "status", None)
+    message = (getattr(erreur, "message", None) or str(erreur)).split("\n")[0][:150]
+    entete = " ".join(str(x) for x in (type(erreur).__name__, code, statut) if x)
+    return f"{entete} : {message}"
+
+
+def _journaliser(resultat, texte, origine, debut, niveau=logging.INFO):
+    """Une ligne par message analysé : qui a décidé, quoi, en combien de temps."""
+    duree = int((time.monotonic() - debut) * 1000)
+    apercu = texte if len(texte) <= 60 else texte[:57] + "..."
+    logger.log(niveau, "%-8s %-9s %-20s %5d ms  « %s »%s", origine, resultat.decision.upper(),
+               resultat.categorie, duree, apercu, f"  → {resultat.raison}" if resultat.raison else "")
+
+
 def moderer(texte):
-    """Analyse un message. Ne lève jamais d'exception : en cas de problème, les règles locales décident."""
+    """Analyse un message. Ne lève jamais d'exception.
+
+    Gemini décide quand il est disponible ; les règles locales ne servent que de secours
+    (pas de clé API, modération IA désactivée, ou erreur / délai dépassé).
+    """
     texte = (texte or "").strip()
     if not texte:
         return ResultatModeration(AUTORISE)
+    debut = time.monotonic()
 
-    # Une insulte évidente est bloquée sans même appeler l'IA
-    regles = moderer_par_regles(texte)
-    if regles.bloque or not ia_disponible():
-        return regles
+    if not ia_disponible():
+        resultat = moderer_par_regles(texte)
+        _journaliser(resultat, texte, "REGLES", debut)
+        return resultat
 
     cle = "moderation:" + hashlib.sha256(texte.encode()).hexdigest()
     en_cache = cache.get(cle)
     if en_cache:
-        return ResultatModeration(**en_cache)
+        resultat = ResultatModeration(**en_cache)
+        _journaliser(resultat, texte, "CACHE", debut)
+        return resultat
+
+    pause = cache.get(CLE_PAUSE_QUOTA)
+    if pause:
+        logger.warning("Quota Gemini atteint, pause en cours : règles locales utilisées")
+        resultat = moderer_par_regles(texte)
+        _journaliser(resultat, texte, "REGLES", debut, logging.WARNING)
+        return resultat
 
     try:
         resultat = moderer_par_gemini(texte)
-    except Exception:
-        logger.exception("Modération Gemini indisponible, repli sur les règles locales")
-        return regles
+    except Exception as e:
+        if getattr(e, "code", None) == 429:
+            # Quota de l'offre gratuite dépassé : inutile de réessayer avant le délai indiqué par Google
+            delai = _delai_avant_reessai(e)
+            cache.set(CLE_PAUSE_QUOTA, True, delai)
+            logger.warning("Quota Gemini dépassé : pause de %d s, règles locales en attendant", delai)
+        else:
+            logger.warning("Gemini indisponible (%s), repli sur les règles locales", _resume_erreur(e))
+        resultat = moderer_par_regles(texte)
+        _journaliser(resultat, texte, "REGLES", debut, logging.WARNING)
+        return resultat
 
     cache.set(cle, resultat.__dict__, DUREE_CACHE)
+    _journaliser(resultat, texte, "GEMINI", debut)
     return resultat
