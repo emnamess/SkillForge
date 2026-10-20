@@ -1,5 +1,6 @@
 {% load humanize %}
-<div class="cloche" data-cloche data-api="{% url 'notifications:api_compteurs' %}">
+<div class="toasts" data-toasts aria-live="polite"></div>
+<div class="cloche" data-cloche data-api="{% url 'notifications:api_compteurs' %}" data-ws="/ws/notifications/">
     <button type="button" class="cloche-bouton" aria-label="Notifications" aria-expanded="false" data-cloche-bouton>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
@@ -19,6 +20,7 @@
                 </form>
             {% endif %}
         </div>
+        <div data-cloche-liste>
         {% for n in dernieres_notifications %}
             <a href="{{ n.get_absolute_url }}" class="notif-item{% if not n.lue %} non-lue{% endif %}">
                 {% include "notifications/partials/icone.html" with type=n.type %}
@@ -29,8 +31,9 @@
                 </span>
             </a>
         {% empty %}
-            <p class="cloche-vide">Aucune notification pour le moment.</p>
+            <p class="cloche-vide" data-cloche-vide>Aucune notification pour le moment.</p>
         {% endfor %}
+        </div>
         <a href="{% url 'notifications:index' %}" class="cloche-tout">Voir toutes les notifications</a>
     </div>
 </div>

@@ -1,5 +1,7 @@
 """API du module notifications, à utiliser depuis les autres apps.
 
+Les notifications créées ici arrivent instantanément dans le navigateur (WebSockets).
+
     from apps.notifications.services import notifier, planifier_rappels_seance, annuler_rappels
     from apps.notifications.models import Notification
 
@@ -14,18 +16,31 @@
 
 import logging
 from datetime import timedelta
+from pathlib import Path
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.mail import send_mail
 from django.db import transaction
+from django.template.defaultfilters import filesizeformat
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
 
-from .models import Conversation, Message, Notification, Rappel
+from . import realtime
+from .moderation import moderer
+from .models import Conversation, Message, Notification, Rappel, Signalement
 
 logger = logging.getLogger(__name__)
+
+
+class MessageBloque(Exception):
+    """Levée quand la modération refuse un message. `resultat` contient la raison."""
+
+    def __init__(self, resultat):
+        super().__init__(resultat.raison)
+        self.resultat = resultat
 
 DELAIS_RAPPEL_SEANCE = (timedelta(hours=24), timedelta(minutes=15))
 
@@ -41,8 +56,9 @@ def notifier(destinataires, titre, message="", *, type=Notification.Type.SYSTEME
         Notification(destinataire=u, type=type, titre=titre, message=message, lien=lien)
         for u in destinataires if u.is_active
     ])
-    if email:
-        for n in notifications:
+    for n in notifications:
+        realtime.pousser_notification(n)
+        if email:
             envoyer_email(n.destinataire, titre, message, lien)
     return notifications
 
@@ -61,7 +77,9 @@ def envoyer_email(user, sujet, message, lien=""):
 
 
 def marquer_toutes_lues(user):
-    return user.notifications.filter(lue=False).update(lue=True)
+    n = user.notifications.filter(lue=False).update(lue=True)
+    realtime.pousser_compteurs(user)
+    return n
 
 
 # ---------- Messagerie ----------
@@ -93,26 +111,104 @@ def obtenir_conversation(user_a, user_b):
     return conversation
 
 
-@transaction.atomic
-def envoyer_message(conversation, expediteur, contenu):
+def valider_piece_jointe(fichier):
+    extension = Path(fichier.name).suffix.lower().lstrip(".")
+    if extension not in settings.PIECE_JOINTE_EXTENSIONS:
+        raise ValidationError(f"Le format .{extension or '?'} n'est pas accepté.")
+    if fichier.size > settings.PIECE_JOINTE_TAILLE_MAX:
+        raise ValidationError(f"Le fichier dépasse la taille maximale "
+                              f"({filesizeformat(settings.PIECE_JOINTE_TAILLE_MAX)}).")
+
+
+def _notifier_moderateurs(signalement):
+    from apps.accounts.models import User
+
+    admins = User.objects.filter(role=User.Role.ADMINISTRATEUR, is_active=True)
+    action = "bloqué" if signalement.decision == Signalement.Decision.BLOQUE else "signalé"
+    notifier(admins, f"Message {action} par la modération IA",
+             f"{signalement.auteur} · {signalement.raison}", type=Notification.Type.SYSTEME,
+             lien=reverse("notifications:moderation"))
+
+
+def envoyer_message(conversation, expediteur, contenu="", fichier=None, resultat_moderation=None):
+    """Envoie un message après modération. Lève `MessageBloque` si l'IA le refuse.
+
+    `resultat_moderation` permet de fournir une analyse déjà faite (le consumer WebSocket
+    interroge l'IA dans un thread séparé pour ne pas bloquer les autres connexions).
+    """
+    contenu = (contenu or "").strip()
     if not conversation.participants.filter(pk=expediteur.pk).exists():
         raise PermissionDenied("Vous ne participez pas à cette conversation.")
+    if not contenu and not fichier:
+        raise ValidationError("Le message est vide.")
+    if fichier:
+        valider_piece_jointe(fichier)
 
-    message = Message.objects.create(conversation=conversation, expediteur=expediteur, contenu=contenu)
-    conversation.save(update_fields=["date_maj"])
+    # L'appel à l'IA se fait hors transaction : la base n'est pas verrouillée pendant l'attente
+    resultat = resultat_moderation or moderer(contenu)
 
-    # Une seule notification non lue par conversation, pour ne pas inonder la cloche
-    destinataire = conversation.interlocuteur(expediteur)
-    lien = conversation.get_absolute_url()
-    if destinataire and not destinataire.notifications.filter(lue=False, type=Notification.Type.MESSAGE,
-                                                              lien=lien).exists():
-        notifier(destinataire, f"Nouveau message de {expediteur}", contenu[:120],
-                 type=Notification.Type.MESSAGE, lien=lien)
+    with transaction.atomic():
+        if resultat.bloque:
+            signalement = Signalement.objects.create(
+                conversation=conversation, auteur=expediteur, contenu=contenu,
+                decision=Signalement.Decision.BLOQUE, categorie=resultat.categorie,
+                raison=resultat.raison, source=resultat.source,
+            )
+            _notifier_moderateurs(signalement)
+        else:
+            message = Message(conversation=conversation, expediteur=expediteur, contenu=contenu,
+                              signale=not resultat.autorise)
+            if fichier:
+                message.nom_fichier = Path(fichier.name).name[:255]
+                message.taille_fichier = fichier.size
+                message.fichier = fichier
+            message.save()
+            conversation.save(update_fields=["date_maj"])
+
+            if message.signale:
+                signalement = Signalement.objects.create(
+                    message=message, conversation=conversation, auteur=expediteur, contenu=contenu,
+                    decision=Signalement.Decision.SIGNALE, categorie=resultat.categorie,
+                    raison=resultat.raison, source=resultat.source,
+                )
+                _notifier_moderateurs(signalement)
+
+            realtime.diffuser_message(message)
+            _notifier_destinataire(conversation, expediteur, message)
+
+    if resultat.bloque:
+        # Hors du bloc atomique : le signalement reste enregistré
+        raise MessageBloque(resultat)
     return message
+
+
+def _notifier_destinataire(conversation, expediteur, message):
+    """Une seule notification non lue par conversation, pour ne pas inonder la cloche."""
+    destinataire = conversation.interlocuteur(expediteur)
+    if destinataire is None:
+        return
+    lien = conversation.get_absolute_url()
+    if destinataire.notifications.filter(lue=False, type=Notification.Type.MESSAGE, lien=lien).exists():
+        realtime.pousser_compteurs(destinataire)
+    else:
+        notifier(destinataire, f"Nouveau message de {expediteur}", message.apercu()[:120],
+                 type=Notification.Type.MESSAGE, lien=lien)
 
 
 def messages_non_lus(user):
     return Message.objects.filter(conversation__participants=user, lu=False).exclude(expediteur=user).count()
+
+
+def rechercher_messages(user, terme, limite=50):
+    """Messages des conversations de l'utilisateur contenant le terme (texte ou nom de fichier)."""
+    from django.db.models import Q
+
+    return (
+        Message.objects.filter(conversation__participants=user)
+        .filter(Q(contenu__icontains=terme) | Q(nom_fichier__icontains=terme))
+        .select_related("expediteur", "conversation")
+        .order_by("-date_envoi")[:limite]
+    )
 
 
 # ---------- Rappels ----------

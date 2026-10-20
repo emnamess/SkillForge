@@ -42,7 +42,12 @@ LOCAL_APPS = [
     "apps.notifications",  # Emna Messaoudi — notifications et messagerie
 ]
 
-INSTALLED_APPS = DJANGO_APPS + LOCAL_APPS
+THIRD_PARTY_APPS = [
+    "channels",
+]
+
+# daphne doit précéder staticfiles : `runserver` sert alors HTTP et WebSockets (ASGI)
+INSTALLED_APPS = ["daphne"] + DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -73,6 +78,23 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "config.wsgi.application"
+ASGI_APPLICATION = "config.asgi.application"
+
+
+# Temps réel (Django Channels)
+# Sans REDIS_URL, une couche en mémoire suffit pour le développement (un seul processus).
+
+REDIS_URL = os.getenv("REDIS_URL")
+
+if REDIS_URL:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {"hosts": [REDIS_URL]},
+        }
+    }
+else:
+    CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
 
 
 # Base de données
@@ -123,6 +145,10 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Fichiers privés (pièces jointes de la messagerie) : jamais servis directement,
+# uniquement via une vue qui vérifie les droits
+PRIVATE_MEDIA_ROOT = BASE_DIR / "private_media"
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
@@ -133,3 +159,23 @@ DEFAULT_FROM_EMAIL = os.getenv("DJANGO_DEFAULT_FROM_EMAIL", "SkillForge <noreply
 
 # Adresse du site, utilisée pour les liens dans les e-mails de notification
 SITE_URL = os.getenv("DJANGO_SITE_URL", "http://127.0.0.1:8000")
+
+
+# Messagerie : pièces jointes
+
+PIECE_JOINTE_TAILLE_MAX = 10 * 1024 * 1024  # 10 Mo
+PIECE_JOINTE_EXTENSIONS = [
+    "pdf", "png", "jpg", "jpeg", "gif", "webp",
+    "doc", "docx", "xls", "xlsx", "ppt", "pptx", "odt", "txt", "md", "csv",
+    "zip", "py", "sql", "ipynb", "json",
+]
+DATA_UPLOAD_MAX_MEMORY_SIZE = PIECE_JOINTE_TAILLE_MAX + 1024 * 1024
+
+
+# Modération IA des messages (Google Gemini)
+# Sans clé API, la modération se replie sur des règles locales.
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
+MODERATION_IA_ACTIVE = os.getenv("MODERATION_IA_ACTIVE", "True") == "True"
+MODERATION_TIMEOUT = int(os.getenv("MODERATION_TIMEOUT", "8"))  # secondes

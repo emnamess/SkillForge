@@ -4,7 +4,7 @@ from io import StringIO
 from django.core import mail
 from django.core.exceptions import PermissionDenied
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -117,6 +117,7 @@ class NotificationsVuesTests(TestCase):
         self.assertEqual(r.context["nb_notifications_non_lues"], 1)
 
 
+@override_settings(GEMINI_API_KEY="")
 class MessagerieServicesTests(TestCase):
     def setUp(self):
         self.apprenant = creer("yasmine@test.tn")
@@ -150,6 +151,7 @@ class MessagerieServicesTests(TestCase):
             services.envoyer_message(c, self.apprenant2, "Intrus")
 
 
+@override_settings(GEMINI_API_KEY="")
 class MessagerieVuesTests(TestCase):
     def setUp(self):
         self.apprenant = creer("yasmine@test.tn")

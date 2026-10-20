@@ -4,6 +4,9 @@
         <h2>Messagerie</h2>
         <a href="{% url 'notifications:nouvelle_conversation' %}" class="btn btn-sm btn-primary">Nouveau</a>
     </div>
+    <form action="{% url 'notifications:recherche' %}" method="get" class="recherche-messages" role="search">
+        <input type="search" name="q" value="{{ terme|default:'' }}" placeholder="Rechercher dans les messages..." aria-label="Rechercher dans les messages" minlength="2">
+    </form>
     <nav class="conversations-liste">
         {% for c in conversations %}
             {% with autre=c.autres.0 %}
@@ -15,7 +18,7 @@
                         <small>{{ c.date_maj|naturaltime }}</small>
                     </span>
                     <span class="conversation-ligne">
-                        <span class="apercu">{% if c.dernier_expediteur == user.pk %}Vous : {% endif %}{{ c.dernier_message|truncatechars:60 }}</span>
+                        <span class="apercu">{% if c.dernier_expediteur == user.pk %}Vous : {% endif %}{% if c.dernier_message %}{{ c.dernier_message|truncatechars:60 }}{% else %}📎 {{ c.dernier_fichier }}{% endif %}</span>
                         {% if c.nb_non_lus %}<span class="pastille">{{ c.nb_non_lus }}</span>{% endif %}
                     </span>
                 </span>
