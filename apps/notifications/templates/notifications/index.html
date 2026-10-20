@@ -1,8 +1,58 @@
 {% extends "base_app.html" %}
+{% load humanize %}
 
-{% block title %}Notifications et messagerie{% endblock %}
+{% block title %}Notifications{% endblock %}
 
 {% block content %}
-<h1 class="page-title">Notifications et messagerie</h1>
-<p class="page-subtitle">Module en cours de développement.</p>
+<div class="entete-page">
+    <div>
+        <h1 class="page-title">Notifications</h1>
+        <p class="page-subtitle">Messages, séances, quiz et activité de votre compte.</p>
+    </div>
+    {% if nb_notifications_non_lues %}
+        <form method="post" action="{% url 'notifications:tout_marquer_lu' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline">Tout marquer comme lu</button>
+        </form>
+    {% endif %}
+</div>
+
+<div class="onglets">
+    <a href="?filtre=toutes" class="onglet{% if filtre != 'non-lues' %} actif{% endif %}">Toutes</a>
+    <a href="?filtre=non-lues" class="onglet{% if filtre == 'non-lues' %} actif{% endif %}">
+        Non lues{% if nb_notifications_non_lues %} <span class="pastille">{{ nb_notifications_non_lues }}</span>{% endif %}
+    </a>
+</div>
+
+<div class="card liste-notifications">
+    {% for n in page %}
+        <div class="notif-ligne{% if not n.lue %} non-lue{% endif %}">
+            <a href="{{ n.get_absolute_url }}" class="notif-item">
+                {% include "notifications/partials/icone.html" with type=n.type %}
+                <span class="notif-texte">
+                    <strong>{{ n.titre }}</strong>
+                    {% if n.message %}<span>{{ n.message }}</span>{% endif %}
+                    <small>{{ n.get_type_display }} · {{ n.date_creation|naturaltime }}</small>
+                </span>
+            </a>
+            <form method="post" action="{% url 'notifications:supprimer' n.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="bouton-icone" aria-label="Supprimer la notification" title="Supprimer">×</button>
+            </form>
+        </div>
+    {% empty %}
+        <p class="vide">
+            {% if filtre == "non-lues" %}Vous avez tout lu, bravo !{% else %}Aucune notification pour le moment.{% endif %}
+        </p>
+    {% endfor %}
+</div>
+
+{% if page.has_other_pages %}
+<nav class="pagination">
+    {% if page.has_previous %}<a href="?filtre={{ filtre }}&page={{ page.previous_page_number }}" class="btn btn-sm btn-outline">Précédent</a>{% endif %}
+    <span>Page {{ page.number }} sur {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a href="?filtre={{ filtre }}&page={{ page.next_page_number }}" class="btn btn-sm btn-outline">Suivant</a>{% endif %}
+</nav>
+{% endif %}
 {% endblock %}

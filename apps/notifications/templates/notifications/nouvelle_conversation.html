@@ -1,0 +1,22 @@
+{% extends "base_app.html" %}
+
+{% block title %}Nouveau message{% endblock %}
+
+{% block content %}
+<div class="messagerie avec-conversation">
+    {% include "notifications/partials/liste_conversations.html" %}
+
+    <section class="discussion card">
+        <header class="discussion-entete">
+            <a href="{% url 'notifications:messagerie' %}" class="retour-mobile" aria-label="Retour aux conversations">←</a>
+            <strong>Nouveau message</strong>
+        </header>
+        <form method="post" class="form nouveau-message" novalidate>
+            {% csrf_token %}
+            {% include "partials/form_field.html" with field=form.destinataire %}
+            {% include "partials/form_field.html" with field=form.contenu %}
+            <button type="submit" class="btn btn-primary">Envoyer</button>
+        </form>
+    </section>
+</div>
+{% endblock %}

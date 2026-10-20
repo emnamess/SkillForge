@@ -1,0 +1,28 @@
+{% load humanize %}
+<aside class="conversations card">
+    <div class="conversations-entete">
+        <h2>Messagerie</h2>
+        <a href="{% url 'notifications:nouvelle_conversation' %}" class="btn btn-sm btn-primary">Nouveau</a>
+    </div>
+    <nav class="conversations-liste">
+        {% for c in conversations %}
+            {% with autre=c.autres.0 %}
+            <a href="{{ c.get_absolute_url }}" class="conversation-item{% if c.pk == conversation.pk %} active{% endif %}{% if c.nb_non_lus %} non-lue{% endif %}">
+                <span class="avatar">{{ autre.initiales|default:"?" }}</span>
+                <span class="conversation-texte">
+                    <span class="conversation-ligne">
+                        <strong>{{ autre|default:"Utilisateur supprimé" }}</strong>
+                        <small>{{ c.date_maj|naturaltime }}</small>
+                    </span>
+                    <span class="conversation-ligne">
+                        <span class="apercu">{% if c.dernier_expediteur == user.pk %}Vous : {% endif %}{{ c.dernier_message|truncatechars:60 }}</span>
+                        {% if c.nb_non_lus %}<span class="pastille">{{ c.nb_non_lus }}</span>{% endif %}
+                    </span>
+                </span>
+            </a>
+            {% endwith %}
+        {% empty %}
+            <p class="vide">Aucune conversation.<br>Écrivez à un formateur pour commencer.</p>
+        {% endfor %}
+    </nav>
+</aside>

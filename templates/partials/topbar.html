@@ -3,8 +3,7 @@
         <input type="search" name="q" placeholder="Rechercher un cours, un module...">
     </form>
     <div class="topbar-right">
-        {# Emplacement de la cloche de notifications (module notifications) #}
-        {% block topbar_notifications %}{% endblock %}
+        {% include "notifications/partials/cloche.html" %}
         <a href="{% url 'accounts:profil' %}" class="user-chip">
             <span class="avatar">{{ user.initiales }}</span>
             <span class="user-chip-text">
