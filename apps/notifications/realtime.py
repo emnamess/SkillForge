@@ -102,6 +102,13 @@ def diffuser_message(message):
     })
 
 
+def diffuser_suppression(message):
+    """Retire un message des conversations ouvertes (suppression par la modération)."""
+    envoyer_au_groupe(groupe_conversation(message.conversation_id), {
+        "type": "chat.supprime", "id": message.pk,
+    })
+
+
 # ---------- Présence (en ligne / hors ligne) ----------
 # Compteur de connexions par utilisateur : plusieurs onglets ouverts = toujours en ligne.
 

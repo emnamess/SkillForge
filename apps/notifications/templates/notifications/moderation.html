@@ -6,7 +6,7 @@
 {% block content %}
 <h1 class="page-title">Modération IA</h1>
 <p class="page-subtitle">
-    Messages bloqués ou signalés par l'IA.
+    L'IA filtre les messages, vous avez le dernier mot : envoyez les faux positifs, confirmez ou sanctionnez.
     {% if ia_active %}<span class="badge badge-green">Gemini actif</span>
     {% else %}<span class="badge badge-orange">IA inactive · règles locales uniquement</span>{% endif %}
 </p>
@@ -44,21 +44,35 @@
                 </div>
             </header>
 
+            <p class="signalement-trajet">
+                Message de <strong>{{ s.auteur }}</strong> à <strong>{{ s.destinataire|default:"un utilisateur supprimé" }}</strong>
+                · {% if s.decision == "bloque" %}<span class="non-livre">non livré</span>{% else %}livré avec un avertissement{% endif %}
+            </p>
             <blockquote class="signalement-contenu">{{ s.contenu|linebreaksbr }}</blockquote>
-            {% if s.raison %}<p class="signalement-raison"><strong>Analyse :</strong> {{ s.raison }}</p>{% endif %}
+            {% if s.raison %}<p class="signalement-raison"><strong>Analyse ({{ s.get_source_display }}) :</strong> {{ s.raison }}</p>{% endif %}
 
             {% if s.traite %}
-                <p class="muted signalement-pied">Traité par {{ s.traite_par|default:"un administrateur" }}.</p>
+                <p class="muted signalement-pied">
+                    {{ s.get_action_display|default:"Traité" }} · par {{ s.traite_par|default:"un administrateur" }}
+                </p>
             {% else %}
                 <div class="signalement-actions">
                     <form method="post" action="{% url 'notifications:traiter_signalement' s.pk %}">
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        {% if s.message %}
-                            <button name="action" value="retablir" class="btn btn-sm btn-outline">Message acceptable</button>
-                            <button name="action" value="supprimer_message" class="btn btn-sm btn-outline">Supprimer le message</button>
+                        {% if s.decision == "bloque" %}
+                            <button name="action" value="envoye" class="btn btn-sm btn-outline"
+                                    title="L'IA s'est trompée : le message est envoyé au destinataire">Faux positif : envoyer</button>
+                            <button name="action" value="confirme" class="btn btn-sm btn-primary">Confirmer le blocage</button>
+                        {% elif s.message %}
+                            <button name="action" value="retabli" class="btn btn-sm btn-outline">Message acceptable</button>
+                            <button name="action" value="supprime" class="btn btn-sm btn-primary"
+                                    title="Retire le message de la conversation, en direct">Supprimer le message</button>
+                        {% else %}
+                            <button name="action" value="confirme" class="btn btn-sm btn-primary">Marquer comme traité</button>
                         {% endif %}
-                        <button name="action" value="traite" class="btn btn-sm btn-primary">Marquer comme traité</button>
+                        <button name="action" value="averti" class="btn btn-sm btn-outline"
+                                title="Envoie un avertissement à l'auteur (notification et e-mail)">Avertir l'auteur</button>
                     </form>
                     {% if s.auteur.is_active and s.auteur != user %}
                         <form method="post" action="{% url 'accounts:basculer_actif' s.auteur.pk %}">

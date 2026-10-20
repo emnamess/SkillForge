@@ -191,18 +191,60 @@ class PageModerationTests(TestCase):
         self.assertContains(r, "c&#x27;est la merde")
         self.assertEqual(r.context["stats"]["a_traiter"], 1)
 
-    def test_retablir_le_message(self):
+    def traiter(self, signalement, action):
         self.client.force_login(self.admin)
-        self.client.post(reverse("notifications:traiter_signalement", args=[self.signalement.pk]),
-                         {"action": "retablir"})
+        return self.client.post(reverse("notifications:traiter_signalement", args=[signalement.pk]),
+                                {"action": action}, follow=True)
+
+    def bloquer(self, texte="espèce de connard"):
+        conv = services.obtenir_conversation(self.apprenant, self.formateur)
+        with self.assertRaises(services.MessageBloque):
+            services.envoyer_message(conv, self.apprenant, texte)
+        return Signalement.objects.filter(decision="bloque").latest("date_creation")
+
+    def test_retablir_le_message(self):
+        self.traiter(self.signalement, "retabli")
         self.message.refresh_from_db()
         self.signalement.refresh_from_db()
         self.assertFalse(self.message.signale)
-        self.assertEqual((self.signalement.traite, self.signalement.traite_par), (True, self.admin))
+        self.assertEqual((self.signalement.traite, self.signalement.traite_par, self.signalement.action),
+                         (True, self.admin, "retabli"))
 
     def test_supprimer_le_message(self):
-        self.client.force_login(self.admin)
-        self.client.post(reverse("notifications:traiter_signalement", args=[self.signalement.pk]),
-                         {"action": "supprimer_message"})
+        r = self.traiter(self.signalement, "supprime")
         self.assertFalse(Message.objects.filter(pk=self.message.pk).exists())
-        self.assertTrue(Signalement.objects.get().traite)  # la trace est conservée
+        s = Signalement.objects.get()
+        self.assertEqual((s.traite, s.action), (True, "supprime"))  # la trace est conservée
+        self.assertTrue(self.apprenant.notifications.filter(titre="Message supprimé par la modération").exists())
+        self.assertContains(r, "Le message a été supprimé de la conversation.")
+
+    def test_faux_positif_envoie_le_message_bloque(self):
+        s = self.bloquer()
+        self.assertFalse(Message.objects.filter(contenu="espèce de connard").exists())
+        self.traiter(s, "envoye")
+        s.refresh_from_db()
+        m = Message.objects.get(contenu="espèce de connard")
+        self.assertEqual((s.message, s.action, m.signale), (m, "envoye", False))
+        self.assertTrue(self.apprenant.notifications.filter(titre="Votre message a été vérifié et envoyé").exists())
+        self.assertTrue(self.formateur.notifications.filter(type="message").exists())  # le destinataire est prévenu
+
+    def test_confirmer_le_blocage(self):
+        s = self.bloquer()
+        self.traiter(s, "confirme")
+        s.refresh_from_db()
+        self.assertEqual((s.traite, s.action, s.message), (True, "confirme", None))
+        self.assertFalse(Message.objects.filter(contenu="espèce de connard").exists())
+
+    def test_avertir_l_auteur(self):
+        s = self.bloquer()
+        self.traiter(s, "averti")
+        avertissement = self.apprenant.notifications.get(titre="Avertissement de la modération")
+        self.assertIn("espèce de connard", avertissement.message)
+
+    def test_page_indique_le_destinataire_et_la_livraison(self):
+        self.bloquer()
+        self.client.force_login(self.admin)
+        r = self.client.get(reverse("notifications:moderation"))
+        self.assertContains(r, "non livré")
+        self.assertContains(r, "Faux positif : envoyer")
+        self.assertContains(r, str(self.formateur))

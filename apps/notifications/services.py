@@ -29,7 +29,7 @@ from django.utils import timezone
 from django.utils.formats import date_format
 
 from . import realtime
-from .moderation import moderer
+from .moderation import AUTORISE, ResultatModeration, moderer
 from .models import Conversation, Message, Notification, Rappel, Signalement
 
 logger = logging.getLogger(__name__)
@@ -180,6 +180,52 @@ def envoyer_message(conversation, expediteur, contenu="", fichier=None, resultat
         # Hors du bloc atomique : le signalement reste enregistré
         raise MessageBloque(resultat)
     return message
+
+
+def traiter_signalement(signalement, moderateur, action):
+    """Décision humaine sur un message bloqué ou signalé par l'IA. Renvoie un message de confirmation."""
+    A = Signalement.Action
+    auteur = signalement.auteur
+    extrait = signalement.contenu if len(signalement.contenu) <= 60 else signalement.contenu[:57] + "..."
+
+    if action == A.ENVOYE and signalement.message is None:
+        # Faux positif : le modérateur a le dernier mot, le message part sans repasser par l'IA
+        message = envoyer_message(signalement.conversation, auteur, signalement.contenu,
+                                  resultat_moderation=ResultatModeration(AUTORISE, source="moderateur"))
+        signalement.message = message
+        notifier(auteur, "Votre message a été vérifié et envoyé",
+                 f"Un modérateur a jugé votre message acceptable : « {extrait} ».",
+                 type=Notification.Type.COMPTE, lien=signalement.conversation.get_absolute_url())
+        confirmation = f"Le message de {auteur} a été envoyé à {signalement.destinataire}."
+
+    elif action == A.AVERTI:
+        notifier(auteur, "Avertissement de la modération",
+                 f"Votre message « {extrait} » enfreint les règles de SkillForge ({signalement.raison or signalement.categorie}). "
+                 "En cas de récidive, votre compte pourra être suspendu.",
+                 type=Notification.Type.COMPTE, email=True)
+        confirmation = f"{auteur} a reçu un avertissement."
+
+    elif action == A.RETABLI and signalement.message:
+        Message.objects.filter(pk=signalement.message_id).update(signale=False)
+        confirmation = "Le message a été jugé acceptable."
+
+    elif action == A.SUPPRIME and signalement.message:
+        realtime.diffuser_suppression(signalement.message)
+        signalement.message.delete()
+        signalement.message = None  # le signalement est conservé comme trace
+        notifier(auteur, "Message supprimé par la modération",
+                 f"Votre message « {extrait} » a été retiré de la conversation.", type=Notification.Type.COMPTE)
+        confirmation = "Le message a été supprimé de la conversation."
+
+    else:
+        action = A.CONFIRME
+        confirmation = "Le blocage a été confirmé."
+
+    signalement.traite = True
+    signalement.traite_par = moderateur
+    signalement.action = action
+    signalement.save(update_fields=["traite", "traite_par", "action", "message"])
+    return confirmation
 
 
 def _notifier_destinataire(conversation, expediteur, message):

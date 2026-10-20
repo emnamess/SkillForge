@@ -160,6 +160,13 @@ class Signalement(models.Model):
         SIGNALE = "signale", "Signalé"
         BLOQUE = "bloque", "Bloqué"
 
+    class Action(models.TextChoices):
+        ENVOYE = "envoye", "Faux positif : message envoyé"
+        CONFIRME = "confirme", "Blocage confirmé"
+        AVERTI = "averti", "Auteur averti"
+        RETABLI = "retabli", "Message jugé acceptable"
+        SUPPRIME = "supprime", "Message supprimé"
+
     class Source(models.TextChoices):
         GEMINI = "gemini", "IA Gemini"
         REGLES = "regles", "Règles locales"
@@ -176,6 +183,7 @@ class Signalement(models.Model):
     traite = models.BooleanField(default=False)
     traite_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
                                    related_name="signalements_traites")
+    action = models.CharField("décision du modérateur", max_length=10, choices=Action.choices, blank=True)
     date_creation = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -183,6 +191,10 @@ class Signalement(models.Model):
 
     def __str__(self):
         return f"{self.get_decision_display()} · {self.auteur} · {self.categorie}"
+
+    @property
+    def destinataire(self):
+        return self.conversation.interlocuteur(self.auteur)
 
 
 class Rappel(models.Model):

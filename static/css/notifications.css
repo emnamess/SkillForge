@@ -462,6 +462,7 @@
 .mention-moderation { margin: 0; padding: 0 1.25rem 0.6rem; color: var(--muted); font-size: 0.75rem; }
 
 .bulle-signalee { box-shadow: inset 3px 0 0 var(--orange); }
+.bulle-supprimee { background: transparent; border: 1px dashed var(--border); color: var(--muted); font-size: 0.88rem; }
 .bulle-alerte { display: block; margin-top: 0.3rem; color: #8a5a10; font-size: 0.75rem; }
 .bulle-ligne.surbrillance .bulle { outline: 2px solid var(--orange); }
 
@@ -479,6 +480,8 @@
     overflow-wrap: anywhere;
 }
 .signalement-raison { margin: 0.5rem 0; font-size: 0.9rem; }
+.signalement-trajet { margin: 0.9rem 0 0; color: var(--muted); font-size: 0.88rem; }
+.non-livre { color: var(--rust); font-weight: 600; }
 .signalement-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
 .signalement-actions form { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .signalement-pied { margin: 0.5rem 0 0; font-size: 0.85rem; }

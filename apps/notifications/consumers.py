@@ -136,6 +136,9 @@ class ConversationConsumer(AsyncJsonWebsocketConsumer):
             # Le destinataire a la conversation sous les yeux : le message est lu
             await self.marquer_lue()
 
+    async def chat_supprime(self, event):
+        await self.send_json({"type": "supprime", "id": event["id"]})
+
     async def chat_ecrit(self, event):
         if event["user_id"] != self.user.pk:
             await self.send_json({"type": "ecrit", "nom": event["nom"]})

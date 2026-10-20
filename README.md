@@ -176,8 +176,15 @@ Chaque message est analysé par **Gemini** avant l'envoi :
 | Signalé | Le message est envoyé mais marqué ; les administrateurs sont prévenus |
 | Bloqué | Le message n'est pas envoyé ; l'auteur voit la raison, les administrateurs sont prévenus |
 
-Les administrateurs traitent les signalements sur `/notifications/moderation/` (lien *Modération* dans le menu) :
-rétablir le message, le supprimer ou désactiver l'auteur.
+**Le back-office garde le dernier mot** sur `/notifications/moderation/` (lien *Modération* dans le menu) :
+
+| Cas | Actions de l'administrateur |
+|---|---|
+| Message **bloqué** (non livré) | *Faux positif : envoyer* (le message part au destinataire, l'auteur est prévenu) · *Confirmer le blocage* |
+| Message **signalé** (livré) | *Message acceptable* · *Supprimer le message* (retiré en direct de la conversation) |
+| Dans tous les cas | *Avertir l'auteur* (notification + e-mail) · *Désactiver l'auteur* |
+
+Chaque signalement indique l'auteur, le destinataire, l'analyse de l'IA, et garde la décision prise et son auteur.
 
 **Configuration** : créer une clé gratuite sur https://aistudio.google.com/apikey puis l'ajouter dans `.env` :
 

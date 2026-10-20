@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Count, OuterRef, Prefetch, Q, Subquery
 from django.http import FileResponse, Http404, JsonResponse
@@ -18,6 +18,7 @@ from .moderation import ia_disponible
 from .realtime import est_en_ligne, message_en_dict
 from .services import (MessageBloque, envoyer_message, marquer_toutes_lues, messages_non_lus,
                        obtenir_conversation, peut_ecrire_a, rechercher_messages)
+from .services import traiter_signalement as appliquer_decision_moderateur
 
 
 def rediriger_vers_suivant(request, defaut):
@@ -250,20 +251,9 @@ def moderation(request):
 @require_POST
 @admin_required
 def traiter_signalement(request, pk):
-    signalement = get_object_or_404(Signalement, pk=pk)
-    action = request.POST.get("action")
-
-    if action == "supprimer_message" and signalement.message:
-        signalement.message.delete()
-        signalement.message = None  # le signalement est conservé comme trace
-        messages.success(request, "Le message a été supprimé de la conversation.")
-    elif action == "retablir" and signalement.message:
-        Message.objects.filter(pk=signalement.message_id).update(signale=False)
-        messages.success(request, "Le message a été rétabli.")
-    else:
-        messages.success(request, "Signalement marqué comme traité.")
-
-    signalement.traite = True
-    signalement.traite_par = request.user
-    signalement.save(update_fields=["traite", "traite_par", "message"])
+    signalement = get_object_or_404(Signalement.objects.select_related("auteur", "conversation", "message"), pk=pk)
+    try:
+        messages.success(request, appliquer_decision_moderateur(signalement, request.user, request.POST.get("action")))
+    except (PermissionDenied, ValidationError) as e:
+        messages.error(request, f"Action impossible : {e.messages[0] if isinstance(e, ValidationError) else e}")
     return rediriger_vers_suivant(request, "notifications:moderation")
