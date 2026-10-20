@@ -1,8 +1,10 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Count, OuterRef, Prefetch, Q, Subquery
-from django.http import JsonResponse
+from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_POST
@@ -13,7 +15,7 @@ from .forms import MessageForm, NouvelleConversationForm
 from .models import Conversation, Message
 from .realtime import est_en_ligne, message_en_dict
 from .services import (envoyer_message, marquer_toutes_lues, messages_non_lus,
-                       obtenir_conversation, peut_ecrire_a)
+                       obtenir_conversation, peut_ecrire_a, rechercher_messages)
 
 
 def rediriger_vers_suivant(request, defaut):
@@ -82,6 +84,7 @@ def conversations_de(user):
         .annotate(
             dernier_message=Subquery(dernier.values("contenu")[:1]),
             dernier_expediteur=Subquery(dernier.values("expediteur")[:1]),
+            dernier_fichier=Subquery(dernier.values("nom_fichier")[:1]),
             nb_non_lus=Count("messages", filter=Q(messages__lu=False) & ~Q(messages__expediteur=user),
                              distinct=True),
         )
@@ -89,6 +92,10 @@ def conversations_de(user):
         .prefetch_related(Prefetch("participants", queryset=User.objects.exclude(pk=user.pk),
                                    to_attr="autres"))
     )
+
+
+def est_ajax(request):
+    return request.headers.get("X-Requested-With") == "XMLHttpRequest"
 
 
 @login_required
@@ -102,10 +109,24 @@ def messagerie(request, pk=None):
         interlocuteur = conversation.interlocuteur(request.user)
 
         if request.method == "POST":
-            form = MessageForm(request.POST)
+            form = MessageForm(request.POST, request.FILES)
+            erreur = None
             if form.is_valid():
-                envoyer_message(conversation, request.user, form.cleaned_data["contenu"])
-                return redirect(conversation)
+                try:
+                    message = envoyer_message(conversation, request.user, form.cleaned_data["contenu"],
+                                              form.cleaned_data["fichier"])
+                except ValidationError as e:
+                    erreur = e.messages[0]
+                else:
+                    if est_ajax(request):
+                        return JsonResponse({"ok": True, "message": message_en_dict(message)})
+                    return redirect(conversation)
+            else:
+                erreur = next(iter(form.errors.values()))[0]
+
+            if est_ajax(request):
+                return JsonResponse({"ok": False, "erreur": erreur}, status=400)
+            messages.error(request, erreur)
 
         conversation.marquer_lue(request.user)
         conversation.interlocuteur_courant = interlocuteur
@@ -116,6 +137,35 @@ def messagerie(request, pk=None):
         "conversation": conversation,
         "messages_conversation": conversation.messages.select_related("expediteur") if conversation else [],
         "form": form,
+        "extensions_acceptees": ",".join(f".{e}" for e in settings.PIECE_JOINTE_EXTENSIONS),
+        "taille_max": settings.PIECE_JOINTE_TAILLE_MAX,
+    })
+
+
+@login_required
+def piece_jointe(request, pk):
+    """Sert une pièce jointe, uniquement aux participants de la conversation."""
+    message = get_object_or_404(Message.objects.filter(conversation__participants=request.user)
+                                .exclude(fichier=""), pk=pk)
+    # Images et PDF s'affichent dans le navigateur ; le reste est téléchargé
+    en_ligne = message.est_image or message.extension == "pdf"
+    if request.GET.get("telecharger"):
+        en_ligne = False
+    try:
+        fichier = message.fichier.open("rb")
+    except FileNotFoundError:
+        raise Http404("Fichier introuvable.")
+    return FileResponse(fichier, as_attachment=not en_ligne, filename=message.nom_fichier)
+
+
+@login_required
+def recherche(request):
+    terme = request.GET.get("q", "").strip()
+    resultats = rechercher_messages(request.user, terme) if len(terme) >= 2 else []
+    return render(request, "notifications/recherche.html", {
+        "terme": terme,
+        "resultats": resultats,
+        "conversations": conversations_de(request.user),
     })
 
 

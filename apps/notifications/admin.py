@@ -14,7 +14,8 @@ class NotificationAdmin(admin.ModelAdmin):
 class MessageInline(admin.TabularInline):
     model = Message
     extra = 0
-    readonly_fields = ("expediteur", "contenu", "lu", "date_envoi")
+    readonly_fields = ("expediteur", "contenu", "nom_fichier", "lu", "date_envoi")
+    exclude = ("fichier",)
     can_delete = False
 
 

@@ -15,6 +15,8 @@ urlpatterns = [
     # Messagerie
     path("messagerie/", views.messagerie, name="messagerie"),
     path("messagerie/nouvelle/", views.nouvelle_conversation, name="nouvelle_conversation"),
+    path("messagerie/recherche/", views.recherche, name="recherche"),
     path("messagerie/<int:pk>/", views.messagerie, name="conversation"),
     path("messagerie/<int:pk>/api/", views.api_messages, name="api_messages"),
+    path("messagerie/fichier/<int:pk>/", views.piece_jointe, name="piece_jointe"),
 ]

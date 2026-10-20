@@ -1,8 +1,21 @@
+{% load messagerie %}
 <div class="bulle-ligne{% if m.expediteur_id == user.pk %} moi{% endif %}" id="message-{{ m.pk }}" data-message-id="{{ m.pk }}">
     <span class="avatar avatar-sm">{{ m.expediteur.initiales }}</span>
     <div>
         <small class="bulle-meta">{% if m.expediteur_id == user.pk %}Vous{% else %}{{ m.expediteur }}{% endif %} {{ m.date_envoi|time:"H:i" }}</small>
         <div class="bulle">
+            {% if m.fichier %}
+                {% if m.est_image %}
+                    <a href="{{ m.url_fichier }}" target="_blank" rel="noopener" class="piece-image">
+                        <img src="{{ m.url_fichier }}" alt="{{ m.nom_fichier }}" loading="lazy">
+                    </a>
+                {% else %}
+                    <a href="{{ m.url_fichier }}?telecharger=1" class="piece-fichier">
+                        <span class="piece-icone">{{ m.extension|upper|default:"?" }}</span>
+                        <span class="piece-texte"><strong>{{ m.nom_fichier }}</strong><small>{{ m.taille_fichier|taille }}</small></span>
+                    </a>
+                {% endif %}
+            {% endif %}
             {% if m.contenu %}<div class="bulle-texte">{{ m.contenu|linebreaksbr }}</div>{% endif %}
         </div>
     </div>

@@ -16,12 +16,14 @@ Les notifications créées ici arrivent instantanément dans le navigateur (WebS
 
 import logging
 from datetime import timedelta
+from pathlib import Path
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.mail import send_mail
 from django.db import transaction
+from django.template.defaultfilters import filesizeformat
 from django.utils import timezone
 from django.utils.formats import date_format
 
@@ -99,16 +101,32 @@ def obtenir_conversation(user_a, user_b):
     return conversation
 
 
-def envoyer_message(conversation, expediteur, contenu):
-    """Envoie un message et le diffuse en temps réel."""
+def valider_piece_jointe(fichier):
+    extension = Path(fichier.name).suffix.lower().lstrip(".")
+    if extension not in settings.PIECE_JOINTE_EXTENSIONS:
+        raise ValidationError(f"Le format .{extension or '?'} n'est pas accepté.")
+    if fichier.size > settings.PIECE_JOINTE_TAILLE_MAX:
+        raise ValidationError(f"Le fichier dépasse la taille maximale "
+                              f"({filesizeformat(settings.PIECE_JOINTE_TAILLE_MAX)}).")
+
+
+def envoyer_message(conversation, expediteur, contenu="", fichier=None):
+    """Envoie un message (texte et/ou pièce jointe) et le diffuse en temps réel."""
     contenu = (contenu or "").strip()
     if not conversation.participants.filter(pk=expediteur.pk).exists():
         raise PermissionDenied("Vous ne participez pas à cette conversation.")
-    if not contenu:
+    if not contenu and not fichier:
         raise ValidationError("Le message est vide.")
+    if fichier:
+        valider_piece_jointe(fichier)
 
     with transaction.atomic():
-        message = Message.objects.create(conversation=conversation, expediteur=expediteur, contenu=contenu)
+        message = Message(conversation=conversation, expediteur=expediteur, contenu=contenu)
+        if fichier:
+            message.nom_fichier = Path(fichier.name).name[:255]
+            message.taille_fichier = fichier.size
+            message.fichier = fichier
+        message.save()
         conversation.save(update_fields=["date_maj"])
 
         realtime.diffuser_message(message)
@@ -125,12 +143,24 @@ def _notifier_destinataire(conversation, expediteur, message):
     if destinataire.notifications.filter(lue=False, type=Notification.Type.MESSAGE, lien=lien).exists():
         realtime.pousser_compteurs(destinataire)
     else:
-        notifier(destinataire, f"Nouveau message de {expediteur}", message.contenu[:120],
+        notifier(destinataire, f"Nouveau message de {expediteur}", message.apercu()[:120],
                  type=Notification.Type.MESSAGE, lien=lien)
 
 
 def messages_non_lus(user):
     return Message.objects.filter(conversation__participants=user, lu=False).exclude(expediteur=user).count()
+
+
+def rechercher_messages(user, terme, limite=50):
+    """Messages des conversations de l'utilisateur contenant le terme (texte ou nom de fichier)."""
+    from django.db.models import Q
+
+    return (
+        Message.objects.filter(conversation__participants=user)
+        .filter(Q(contenu__icontains=terme) | Q(nom_fichier__icontains=terme))
+        .select_related("expediteur", "conversation")
+        .order_by("-date_envoi")[:limite]
+    )
 
 
 # ---------- Rappels ----------

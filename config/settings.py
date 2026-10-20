@@ -145,6 +145,10 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Fichiers privés (pièces jointes de la messagerie) : jamais servis directement,
+# uniquement via une vue qui vérifie les droits
+PRIVATE_MEDIA_ROOT = BASE_DIR / "private_media"
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
@@ -156,4 +160,14 @@ DEFAULT_FROM_EMAIL = os.getenv("DJANGO_DEFAULT_FROM_EMAIL", "SkillForge <noreply
 # Adresse du site, utilisée pour les liens dans les e-mails de notification
 SITE_URL = os.getenv("DJANGO_SITE_URL", "http://127.0.0.1:8000")
 
+
+# Messagerie : pièces jointes
+
+PIECE_JOINTE_TAILLE_MAX = 10 * 1024 * 1024  # 10 Mo
+PIECE_JOINTE_EXTENSIONS = [
+    "pdf", "png", "jpg", "jpeg", "gif", "webp",
+    "doc", "docx", "xls", "xlsx", "ppt", "pptx", "odt", "txt", "md", "csv",
+    "zip", "py", "sql", "ipynb", "json",
+]
+DATA_UPLOAD_MAX_MEMORY_SIZE = PIECE_JOINTE_TAILLE_MAX + 1024 * 1024
 

@@ -24,6 +24,12 @@
         return e;
     }
 
+    function tailleLisible(octets) {
+        if (octets < 1024) return octets + " octets";
+        if (octets < 1024 * 1024) return (octets / 1024).toFixed(1).replace(".", ",") + " Ko";
+        return (octets / 1024 / 1024).toFixed(1).replace(".", ",") + " Mo";
+    }
+
     function majPastille(element, valeur) {
         if (!element) return;
         element.textContent = valeur > 99 ? "99+" : valeur;
@@ -162,6 +168,7 @@
     const form = document.querySelector("[data-saisie]");
     const zone = form.querySelector("textarea");
     const boutonEnvoyer = form.querySelector("[data-envoyer]");
+    const champFichier = form.querySelector("[data-fichier]");
     const alerte = document.querySelector("[data-alerte-envoi]");
     const ecrit = document.querySelector("[data-ecrit]");
     const affiches = new Set(
@@ -174,7 +181,7 @@
         return discussion.scrollHeight - discussion.scrollTop - discussion.clientHeight < 80;
     };
 
-    // Lien vers un message précis (#message-<id>) : on se place dessus
+    // Arrivée depuis une recherche : on se place sur le message trouvé
     const cible = location.hash && document.querySelector(location.hash);
     if (cible) {
         cible.scrollIntoView({ block: "center" });
@@ -192,6 +199,28 @@
         bloc.append(el("small", "bulle-meta", (m.moi ? "Vous" : m.auteur) + " " + m.heure));
         const bulle = el("div", "bulle");
 
+        if (m.fichier) {
+            if (m.fichier.image) {
+                const a = el("a", "piece-image");
+                a.href = m.fichier.url;
+                a.target = "_blank";
+                a.rel = "noopener";
+                const img = el("img");
+                img.src = m.fichier.url;
+                img.alt = m.fichier.nom;
+                img.addEventListener("load", function () { if (estEnBas()) defilerEnBas(); });
+                a.append(img);
+                bulle.append(a);
+            } else {
+                const a = el("a", "piece-fichier");
+                a.href = m.fichier.url + "?telecharger=1";
+                const ext = (m.fichier.nom.split(".").pop() || "?").toUpperCase();
+                const texte = el("span", "piece-texte");
+                texte.append(el("strong", "", m.fichier.nom), el("small", "", tailleLisible(m.fichier.taille)));
+                a.append(el("span", "piece-icone", ext), texte);
+                bulle.append(a);
+            }
+        }
         if (m.contenu) bulle.append(el("div", "bulle-texte", m.contenu));
 
         bloc.append(bulle);
@@ -270,14 +299,73 @@
             .catch(function () {});
     }, INTERVALLE_MESSAGES);
 
+    // ---------- Pièce jointe ----------
+
+    const apercu = document.querySelector("[data-piece-selectionnee]");
+    const tailleMax = Number(form.dataset.tailleMax);
+    const extensions = champFichier.accept.split(",");
+
+    function retirerFichier() {
+        champFichier.value = "";
+        apercu.hidden = true;
+    }
+    apercu.querySelector("[data-piece-retirer]").addEventListener("click", retirerFichier);
+
+    champFichier.addEventListener("change", function () {
+        const f = champFichier.files[0];
+        if (!f) return retirerFichier();
+        const ext = "." + f.name.split(".").pop().toLowerCase();
+        if (extensions.indexOf(ext) === -1) {
+            retirerFichier();
+            return montrerAlerte("Le format " + ext + " n'est pas accepté.");
+        }
+        if (f.size > tailleMax) {
+            retirerFichier();
+            return montrerAlerte("Le fichier dépasse la taille maximale (" + tailleLisible(tailleMax) + ").");
+        }
+        alerte.hidden = true;
+        apercu.querySelector("[data-piece-ext]").textContent = ext.slice(1).toUpperCase();
+        apercu.querySelector("[data-piece-nom]").textContent = f.name;
+        apercu.querySelector("[data-piece-taille]").textContent = tailleLisible(f.size);
+        apercu.hidden = false;
+        zone.focus();
+    });
+
+    function envoyerAvecFichier() {
+        attente(true);
+        fetch(form.action || location.pathname, {
+            method: "POST",
+            body: new FormData(form),
+            headers: { "X-Requested-With": "XMLHttpRequest", "X-CSRFToken": cookie("csrftoken") },
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                attente(false);
+                if (!data.ok) return montrerAlerte(data.erreur);
+                zone.value = "";
+                zone.dispatchEvent(new Event("input"));
+                retirerFichier();
+                afficherMessage(Object.assign({}, data.message, { moi: true }));
+            })
+            .catch(function () {
+                attente(false);
+                montrerAlerte("L'envoi a échoué. Vérifiez votre connexion.");
+            });
+    }
+
     // ---------- Envoi ----------
 
     form.addEventListener("submit", function (e) {
         if (refEnCours) return e.preventDefault();
         const texte = zone.value.trim();
-        if (!texte) return e.preventDefault();
+        const fichier = champFichier.files[0];
+        if (!texte && !fichier) return e.preventDefault();
         alerte.hidden = true;
 
+        if (fichier) {
+            e.preventDefault();
+            return envoyerAvecFichier();
+        }
         if (socket.connecte) {
             e.preventDefault();
             refEnCours = String(Date.now());

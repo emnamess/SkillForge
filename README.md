@@ -89,6 +89,7 @@ Pour tester rapidement les trois rôles, créer des comptes depuis `/comptes/ins
 | `/notifications/` | Toutes les notifications (aussi accessibles via la cloche en haut à droite) |
 | `/notifications/messagerie/` | Messagerie interne |
 | `/notifications/messagerie/nouvelle/?a=<id>` | Écrire à un utilisateur (destinataire présélectionné) |
+| `/notifications/messagerie/recherche/?q=...` | Recherche dans les messages |
 
 Règles de la messagerie : un apprenant peut écrire aux formateurs et aux administrateurs ; formateurs et administrateurs peuvent écrire à tout le monde.
 
@@ -137,6 +138,12 @@ messages instantanés, indicateur « en train d'écrire », statut en ligne et n
 - Si le WebSocket est coupé, la page se rabat toute seule sur une actualisation périodique.
 - Un module qui a besoin de ses propres WebSockets (ex. signalisation des appels vidéo du mentorat) ajoute ses routes dans `config/asgi.py`.
 - En production avec plusieurs processus, installer `channels-redis` et définir `REDIS_URL` dans `.env`.
+
+### Pièces jointes et recherche
+
+- Bouton trombone dans une conversation : PDF, images, documents Office, code, archives… **10 Mo maximum**.
+- Les fichiers sont stockés dans `private_media/` (non versionné) et ne sont accessibles **qu'aux participants** de la conversation.
+- Champ de recherche au-dessus des conversations : cherche dans le texte des messages et les noms de fichiers.
 
 ### Envoyer les rappels
 

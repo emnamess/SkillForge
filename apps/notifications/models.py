@@ -1,8 +1,47 @@
+import uuid
+from pathlib import Path
+
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.core.files.storage import FileSystemStorage
 from django.db import models
 from django.urls import reverse
+from django.utils.functional import cached_property
+
+
+class StockagePrive(FileSystemStorage):
+    """Stockage dans PRIVATE_MEDIA_ROOT, relu à chaque changement du réglage (utile pour les tests)."""
+
+    @cached_property
+    def base_location(self):
+        return settings.PRIVATE_MEDIA_ROOT
+
+    def _clear_cached_properties(self, setting, **kwargs):
+        super()._clear_cached_properties(setting, **kwargs)
+        if setting == "PRIVATE_MEDIA_ROOT":
+            self.__dict__.pop("base_location", None)
+            self.__dict__.pop("location", None)
+
+
+_stockage_prive = StockagePrive()
+
+
+def stockage_prive():
+    """Pièces jointes stockées hors de MEDIA_ROOT : elles ne sont servies que par la vue `piece_jointe`.
+
+    Passé sous forme de fonction pour que la migration ne contienne pas le chemin de la machine.
+    """
+    return _stockage_prive
+
+
+EXTENSIONS_IMAGE = {"png", "jpg", "jpeg", "gif", "webp"}
+
+
+def chemin_piece_jointe(message, nom_original):
+    """Nom de fichier aléatoire : on ne peut ni le deviner ni écraser un autre fichier."""
+    extension = Path(nom_original).suffix.lower()
+    return f"messagerie/{message.conversation_id}/{uuid.uuid4().hex}{extension}"
 
 
 class Notification(models.Model):
@@ -82,7 +121,10 @@ class Message(models.Model):
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="messages")
     expediteur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                                    related_name="messages_envoyes")
-    contenu = models.TextField(max_length=2000)
+    contenu = models.TextField(max_length=2000, blank=True)
+    fichier = models.FileField(upload_to=chemin_piece_jointe, storage=stockage_prive, blank=True)
+    nom_fichier = models.CharField(max_length=255, blank=True)
+    taille_fichier = models.PositiveIntegerField(default=0)
     lu = models.BooleanField(default=False)
     date_envoi = models.DateTimeField(auto_now_add=True)
 
@@ -90,7 +132,24 @@ class Message(models.Model):
         ordering = ["date_envoi"]
 
     def __str__(self):
-        return f"{self.expediteur} : {self.contenu[:40]}"
+        return f"{self.expediteur} : {self.contenu[:40] or self.nom_fichier}"
+
+    @property
+    def extension(self):
+        return Path(self.nom_fichier).suffix.lower().lstrip(".")
+
+    @property
+    def est_image(self):
+        return bool(self.fichier) and self.extension in EXTENSIONS_IMAGE
+
+    def url_fichier(self):
+        return reverse("notifications:piece_jointe", args=[self.pk]) if self.fichier else ""
+
+    def apercu(self):
+        """Texte court utilisé dans la liste des conversations et les notifications."""
+        if self.contenu:
+            return self.contenu
+        return f"📎 {self.nom_fichier}" if self.fichier else ""
 
 
 class Rappel(models.Model):

@@ -1,0 +1,40 @@
+{% extends "base_app.html" %}
+{% load messagerie %}
+
+{% block title %}Recherche · Messagerie{% endblock %}
+
+{% block content %}
+<div class="messagerie avec-conversation">
+    {% include "notifications/partials/liste_conversations.html" %}
+
+    <section class="discussion card">
+        <header class="discussion-entete">
+            <a href="{% url 'notifications:messagerie' %}" class="retour-mobile" aria-label="Retour aux conversations">←</a>
+            <div>
+                <strong>Recherche</strong>
+                <small>
+                    {% if terme|length < 2 %}Saisissez au moins 2 caractères.
+                    {% else %}{{ resultats|length }} résultat{{ resultats|length|pluralize }} pour « {{ terme }} »{% endif %}
+                </small>
+            </div>
+        </header>
+        <div class="resultats-recherche">
+            {% for m in resultats %}
+                <a href="{{ m.conversation.get_absolute_url }}#message-{{ m.pk }}" class="resultat">
+                    <span class="avatar avatar-sm">{{ m.expediteur.initiales }}</span>
+                    <span class="resultat-texte">
+                        <span class="conversation-ligne">
+                            <strong>{% if m.expediteur_id == user.pk %}Vous{% else %}{{ m.expediteur }}{% endif %}</strong>
+                            <small>{{ m.date_envoi|date:"d/m/Y H:i" }}</small>
+                        </span>
+                        {% if m.contenu %}<span>{{ m.contenu|truncatechars:200|surligner:terme }}</span>{% endif %}
+                        {% if m.fichier %}<span class="resultat-fichier">📎 {{ m.nom_fichier|surligner:terme }}</span>{% endif %}
+                    </span>
+                </a>
+            {% empty %}
+                {% if terme|length >= 2 %}<p class="vide">Aucun message ne contient « {{ terme }} ».</p>{% endif %}
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}
