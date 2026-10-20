@@ -24,3 +24,6 @@ staticfiles/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Node (raccourcis npm)
+node_modules/
