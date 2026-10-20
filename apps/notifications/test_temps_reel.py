@@ -133,3 +133,20 @@ class TempsReelTests(TransactionTestCase):
         self.assertEqual(donnees["notification"]["titre"], "Quiz corrigé")
         self.assertGreaterEqual(donnees["compteurs"]["notifications"], 1)
         await ws.disconnect()
+
+    async def test_suppression_par_la_moderation_en_direct(self):
+        from .moderation import SIGNALE, ResultatModeration
+        from .models import Signalement
+
+        admin = await database_sync_to_async(creer)("admin@test.tn", User.Role.ADMINISTRATEUR)
+        message = await database_sync_to_async(services.envoyer_message)(
+            self.conv, self.apprenant, "message douteux",
+            resultat_moderation=ResultatModeration(SIGNALE, "vulgarite", "Douteux."))
+        ws_formateur, _, _ = await connecter(self.chemin, self.formateur)
+
+        signalement = await database_sync_to_async(Signalement.objects.get)(message=message)
+        await database_sync_to_async(services.traiter_signalement)(signalement, admin, "supprime")
+
+        evenement = await recevoir_type(ws_formateur, "supprime")
+        self.assertEqual(evenement["id"], message.pk)
+        await ws_formateur.disconnect()

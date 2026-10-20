@@ -51,6 +51,8 @@ Il utilise automatiquement le Python du `venv` : **pas besoin d'activer l'enviro
 | `python run.py update` | Met à jour après un `git pull` fait à la main |
 | `python run.py demo` | Crée des comptes de démo avec des conversations (voir ci-dessous) |
 | `python run.py demo --reinitialiser` | Supprime puis recrée les données de démo |
+| `python run.py moderation "texte"` | Compare la décision de Gemini et des règles locales (vérifie la clé API) |
+| `python run.py logs` | Affiche les dernières décisions de modération |
 | `python run.py superuser` | Crée un compte administrateur |
 | `python run.py shell` | Ouvre un shell Python avec Django chargé |
 | `python run.py rappels` | Envoie les rappels de séances dus |
@@ -58,15 +60,21 @@ Il utilise automatiquement le Python du `venv` : **pas besoin d'activer l'enviro
 
 ### Comptes de démo
 
-`python run.py demo` crée des comptes prêts à l'emploi pour tester tous les rôles
-(mot de passe commun : `SkillForge2026!`) :
+`python run.py demo` crée des comptes prêts à l'emploi pour tester tous les rôles.
+On peut se connecter avec l'e-mail **ou** le nom d'utilisateur.
 
-| E-mail | Rôle |
-|---|---|
-| `admin@demo.skillforge.tn` | Administrateur (accès à `/admin/`) |
-| `karim@demo.skillforge.tn`, `leila@demo.skillforge.tn` | Formateurs validés |
-| `sami@demo.skillforge.tn` | Formateur en attente de validation |
-| `yasmine@demo.skillforge.tn`, `amine@demo.skillforge.tn`, `sarra@demo.skillforge.tn` | Apprenants |
+| Nom | E-mail | Nom d'utilisateur | Mot de passe | Rôle |
+|---|---|---|---|---|
+| Nadia Admin | `admin@demo.skillforge.tn` | `demo_admin` | `SkillForge2026!` | Administrateur (accès à `/admin/`) |
+| Karim Mansour | `karim@demo.skillforge.tn` | `demo_karim` | `SkillForge2026!` | Formateur · Modélisation UML |
+| Leïla Trabelsi | `leila@demo.skillforge.tn` | `demo_leila` | `SkillForge2026!` | Formateur · Bases de données |
+| Sami Rekik | `sami@demo.skillforge.tn` | `demo_sami` | `SkillForge2026!` | Formateur **en attente de validation** |
+| Yasmine Ben Ali | `yasmine@demo.skillforge.tn` | `demo_yasmine` | `SkillForge2026!` | Apprenante |
+| Amine Mejri | `amine@demo.skillforge.tn` | `demo_amine` | `SkillForge2026!` | Apprenant |
+| Sarra Khelifi | `sarra@demo.skillforge.tn` | `demo_sarra` | `SkillForge2026!` | Apprenante |
+
+> Ces comptes n'existent que sur votre machine, après `python run.py demo` (la commande refuse de tourner
+> hors développement). Ne réutilisez jamais ce mot de passe pour de vrais comptes.
 
 Ils arrivent avec des conversations, des notifications, un message signalé à modérer et un rappel de séance
 qui arrive 2 minutes après la création (si `python run.py dev` tourne). Pour tester le temps réel, ouvrir deux
@@ -174,8 +182,15 @@ Chaque message est analysé par **Gemini** avant l'envoi :
 | Signalé | Le message est envoyé mais marqué ; les administrateurs sont prévenus |
 | Bloqué | Le message n'est pas envoyé ; l'auteur voit la raison, les administrateurs sont prévenus |
 
-Les administrateurs traitent les signalements sur `/notifications/moderation/` (lien *Modération* dans le menu) :
-rétablir le message, le supprimer ou désactiver l'auteur.
+**Le back-office garde le dernier mot** sur `/notifications/moderation/` (lien *Modération* dans le menu) :
+
+| Cas | Actions de l'administrateur |
+|---|---|
+| Message **bloqué** (non livré) | *Faux positif : envoyer* (le message part au destinataire, l'auteur est prévenu) · *Confirmer le blocage* |
+| Message **signalé** (livré) | *Message acceptable* · *Supprimer le message* (retiré en direct de la conversation) |
+| Dans tous les cas | *Avertir l'auteur* (notification + e-mail) · *Désactiver l'auteur* |
+
+Chaque signalement indique l'auteur, le destinataire, l'analyse de l'IA, et garde la décision prise et son auteur.
 
 **Configuration** : créer une clé gratuite sur https://aistudio.google.com/apikey puis l'ajouter dans `.env` :
 
@@ -183,8 +198,29 @@ rétablir le message, le supprimer ou désactiver l'auteur.
 GEMINI_API_KEY=votre-cle
 ```
 
-Sans clé (ou si l'API ne répond pas), la modération se replie automatiquement sur des **règles locales** (liste de mots,
-numéros de téléphone) : la messagerie continue de fonctionner. Les tests n'appellent jamais la vraie API.
+**Qui décide ?** Gemini analyse chaque message. Les **règles locales** (listes de mots en français, anglais et darija,
+contournements comme « m3rde » ou « f u c k », numéros de téléphone) ne servent que de secours : sans clé API,
+si Gemini est en panne ou lent, ou quand le quota gratuit est dépassé. La messagerie continue donc toujours de fonctionner.
+Les tests n'appellent jamais la vraie API.
+
+**Journal des décisions** : chaque message analysé est tracé dans le terminal de `runserver` et dans `logs/moderation.log`
+(non versionné). La première colonne indique qui a décidé :
+
+```
+20/10 20:34:21 [Modération] GEMINI   BLOQUE    harcelement  4422 ms  « personne ne veut de toi ici »  → Les attaques…
+20/10 20:34:30 [Modération] CACHE    BLOQUE    harcelement     0 ms  « personne ne veut de toi ici »  → Les attaques…
+20/10 20:35:02 [Modération] Quota Gemini dépassé : pause de 26 s, règles locales en attendant
+20/10 20:35:02 [Modération] REGLES   AUTORISE  aucune          0 ms  « merci »
+```
+
+- `GEMINI` : décision de l'IA · `CACHE` : message identique déjà analysé par l'IA (24 h) · `REGLES` : secours local
+- Une ligne d'avertissement explique toujours pourquoi les règles ont pris le relais.
+- Le bandeau « Message non envoyé » et la page Modération indiquent aussi la source (IA Gemini ou règles locales).
+
+**Quota gratuit** : l'offre gratuite de Gemini limite le nombre de requêtes (environ 5 par minute et par modèle).
+Au-delà, SkillForge fait une pause du délai indiqué par Google puis reprend automatiquement. Réglages possibles dans `.env` :
+`GEMINI_MODEL` (défaut `gemini-3.5-flash`), `GEMINI_REFLEXION` (défaut `minimal`, réponse en ~1 s), `MODERATION_TIMEOUT`
+(défaut 15 s, minimum 10 s).
 
 ### Envoyer les rappels
 

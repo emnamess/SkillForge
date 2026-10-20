@@ -179,6 +179,21 @@ def demo(args):
     manage("creer_demo", *args)
 
 
+def moderation(args):
+    """Teste la modération : Gemini et règles locales côte à côte (ex. : python run.py moderation "texte")."""
+    manage("tester_moderation", *args)
+
+
+def logs(args):
+    """Affiche les dernières décisions de modération (logs/moderation.log)."""
+    fichier = RACINE / "logs" / "moderation.log"
+    if not fichier.exists():
+        erreur("Aucun journal pour l'instant : envoyez un message dans la messagerie.")
+    lignes = fichier.read_text(encoding="utf-8").splitlines()
+    nombre = int(args[0]) if args else 30
+    print("\n".join(lignes[-nombre:]))
+
+
 def superuser(args):
     """Crée un compte administrateur."""
     manage("createsuperuser", *args)
@@ -211,6 +226,8 @@ COMMANDES = {
     "update": update,
     "pull": pull,
     "demo": demo,
+    "moderation": moderation,
+    "logs": logs,
     "superuser": superuser,
     "shell": shell,
     "clean": clean,
