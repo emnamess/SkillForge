@@ -44,6 +44,7 @@ Il utilise automatiquement le Python du `venv` : **pas besoin d'activer l'enviro
 | `python run.py serveur` | Lance uniquement le serveur web |
 | `python run.py test` | Lance tous les tests |
 | `python run.py test apps.accounts` | Lance les tests d'une seule app |
+| `python run.py couverture apps.certificates` | Lance les tests avec le rapport de couverture (coverage.py) |
 | `python run.py check` | Vérifie la configuration et les migrations oubliées (à faire avant une PR) |
 | `python run.py makemigrations courses` | Crée les migrations après une modification de modèle |
 | `python run.py migrate` | Applique les migrations |
@@ -233,6 +234,43 @@ python run.py rappels --boucle    # vérifie chaque minute (déjà inclus dans p
 
 En production, la lancer chaque minute avec le Planificateur de tâches Windows ou une tâche cron :
 `* * * * * cd /chemin/SkillForge && venv/bin/python manage.py envoyer_rappels`
+
+## Certificats et statistiques
+
+| URL | Page |
+|---|---|
+| `/certificats/` | Apprenant : ses certificats · Formateur / admin : progression et certificats délivrés |
+| `/certificats/<code>/` | Certificat imprimable (bouton « Télécharger en PDF ») |
+| `/certificats/delivrer/` | Délivrer un certificat (formateur validé, administrateur) |
+| `/certificats/<code>/modifier/` | Corriger un certificat (formateur concerné, administrateur) |
+| `/certificats/<code>/supprimer/` | Supprimer un certificat (administrateur) |
+| `/certificats/statistiques/` | Statistiques (plateforme pour l'admin, ses cours pour le formateur) |
+| `/certificats/export.csv` | Export des certificats (administrateur) |
+| `/certificats/verifier/` | **Page publique** : vérifier un certificat avec son code `SF-XXXX-XXXX` |
+
+- Une fraude se traite par la **révocation** (administrateur, depuis la page du certificat) : le certificat reste
+  visible comme « révoqué » lors d'une vérification. La suppression est réservée aux erreurs de délivrance.
+- Un apprenant ne peut avoir qu'un seul certificat valide par cours.
+
+### Délivrer un certificat depuis votre module
+
+```python
+from apps.certificates.services import delivrer_si_eligible
+
+# Module cours : à appeler à chaque mise à jour de la progression (aucun doublon n'est créé)
+delivrer_si_eligible(inscription.apprenant, cours.titre, progression=inscription.progression,
+                     score=moyenne_quiz, formateur=cours.formateur)
+```
+
+Éligibilité : progression à 100 % et score ≥ `CERTIFICAT_SCORE_MINIMUM` (70 par défaut, réglable dans les paramètres).
+Le suivi de progression lit `courses.Inscription` (`apprenant`, `cours`, `progression`, `date_inscription`) dès que ce
+modèle existe ; les noms de champs se règlent dans `apps/certificates/progression.py`.
+
+### Couverture des tests
+
+```bash
+python run.py couverture apps.certificates   # tests + rapport dans le terminal et dans htmlcov/index.html
+```
 
 ## Structure
 

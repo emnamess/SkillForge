@@ -1,0 +1,84 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Certificat · {{ certificat.titre_cours }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/certificates.css' %}">{% endblock %}
+
+{% block content %}
+<nav class="certif-toolbar no-print" aria-label="Actions sur le certificat">
+    <a href="{% url 'certificates:index' %}" class="back-link">← {% if user.est_apprenant %}Mes certificats{% else %}Progression et certificats{% endif %}</a>
+    <div class="actions">
+        <a href="{{ certificat.get_verification_url }}" class="btn btn-outline" target="_blank" rel="noopener">Page de vérification<span class="sr-only"> (nouvel onglet)</span></a>
+        {% if peut_modifier %}<a href="{% url 'certificates:modifier' certificat.code_verification %}" class="btn btn-outline">Modifier</a>{% endif %}
+        {% if user.est_administrateur %}<a href="{% url 'certificates:supprimer' certificat.code_verification %}" class="btn btn-outline btn-outline-danger">Supprimer</a>{% endif %}
+        {% if certificat.est_valide %}<button type="button" class="btn btn-primary" data-imprimer>Télécharger en PDF</button>{% endif %}
+    </div>
+</nav>
+
+<article class="certificat">
+    {% if not certificat.est_valide %}<div class="certificat-revoque">RÉVOQUÉ</div>{% endif %}
+
+    <div class="certificat-entete">
+        <span class="brand-logo" aria-hidden="true">SF</span>
+        <span class="brand-name">SkillForge</span>
+    </div>
+
+    <p class="certificat-surtitre">Certificat de réussite</p>
+    <h1>{{ certificat.titre_cours }}</h1>
+
+    <p class="certificat-decerne">Ce certificat est décerné à</p>
+    <div class="certificat-nom">{{ certificat.apprenant.get_full_name|default:certificat.apprenant.username }}</div>
+    <p class="certificat-decerne">pour avoir suivi l'intégralité du parcours et validé ses évaluations.</p>
+
+    {% if certificat.liste_competences %}
+        <div class="certificat-competences">
+            {% for comp in certificat.liste_competences %}<span class="badge badge-indigo">{{ comp }}</span>{% endfor %}
+        </div>
+    {% endif %}
+
+    {% if certificat.score is not None or certificat.duree_heures %}
+        <div class="certificat-chiffres">
+            {% if certificat.score is not None %}<div><strong>{{ certificat.score }} %</strong><span>Score final</span></div>
+            <div><strong>{{ certificat.mention }}</strong><span>Mention</span></div>{% endif %}
+            {% if certificat.duree_heures %}<div><strong>{{ certificat.duree_heures }} h</strong><span>Durée du parcours</span></div>{% endif %}
+        </div>
+    {% endif %}
+
+    <div class="certificat-pied">
+        <div class="signature">
+            <strong>{{ certificat.date_delivrance|date:"j F Y" }}</strong>
+            <span>Date de délivrance</span>
+        </div>
+        <div class="certificat-sceau" aria-hidden="true">Skill<br>Forge<br>✓</div>
+        <div class="signature">
+            <strong>{{ certificat.nom_formateur|default:"L'équipe SkillForge" }}</strong>
+            <span>{% if certificat.nom_formateur %}Formateur{% else %}Plateforme{% endif %}</span>
+        </div>
+    </div>
+
+    <p class="certificat-code">Code de vérification <code>{{ certificat.code_verification }}</code> · {{ url_verification }}</p>
+</article>
+
+{% if not certificat.est_valide %}
+    <div class="card revocation alert-error">
+        <strong>Révoqué le {{ certificat.date_revocation|date:"j F Y" }}.</strong>
+        Motif : {{ certificat.motif_revocation }}
+    </div>
+{% elif form_revocation %}
+    <details class="card revocation no-print">
+        <summary>Révoquer ce certificat</summary>
+        <form method="post" action="{% url 'certificates:revoquer' certificat.code_verification %}" class="form">
+            {% csrf_token %}
+            {% include "partials/form_field.html" with field=form_revocation.motif %}
+            <p class="muted">L'apprenant sera prévenu et la page de vérification indiquera que le certificat n'est plus valide.</p>
+            <button type="submit" class="btn btn-danger">Confirmer la révocation</button>
+        </form>
+    </details>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelector("[data-imprimer]")?.addEventListener("click", () => window.print());
+</script>
+{% endblock %}

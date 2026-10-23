@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{# Rendue sans contexte (ni utilisateur ni requête) : ne rien utiliser d'autre que des URL fixes. #}
+
+{% block title %}Erreur du serveur{% endblock %}
+
+{% block content %}
+<div class="auth-card card">
+    <p class="badge badge-rust">Erreur 500</p>
+    <h1 class="page-title">Un problème est survenu</h1>
+    <p class="page-subtitle">Le serveur a rencontré une erreur inattendue. L'équipe en a été informée :
+        réessayez dans quelques instants.</p>
+    <a href="{% url 'home' %}" class="btn btn-primary btn-block">Retour à l'accueil</a>
+</div>
+{% endblock %}

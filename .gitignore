@@ -16,6 +16,8 @@ private_media/
 staticfiles/
 *.log
 logs/
+.coverage
+htmlcov/
 
 # Secrets
 .env

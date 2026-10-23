@@ -1,0 +1,15 @@
+{# Histogramme mensuel. Usage : {% include "certificates/partials/barres.html" with serie=serie_certificats unite="certificat" %} #}
+<div class="barres" role="list">
+    {% for point in serie %}
+        <div class="barre{% if forloop.last or point.hauteur == 100 %} etiquetee{% endif %}" role="listitem" tabindex="0"
+             aria-label="{{ point.titre }} : {{ point.valeur }} {{ unite }}{{ point.valeur|pluralize }}">
+            <span class="barre-remplie" style="height: {{ point.hauteur }}%">
+                <span class="barre-valeur">{{ point.valeur }}</span>
+            </span>
+            <span class="barre-bulle">{{ point.titre }} · {{ point.valeur }} {{ unite }}{{ point.valeur|pluralize }}</span>
+        </div>
+    {% endfor %}
+</div>
+<div class="barres-axe" aria-hidden="true">
+    {% for point in serie %}<span>{{ point.label }}</span>{% endfor %}
+</div>

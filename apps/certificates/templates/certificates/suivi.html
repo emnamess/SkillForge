@@ -1,0 +1,111 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Progression et certificats{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/certificates.css' %}">{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1 class="page-title">Progression et certificats</h1>
+        <p class="page-subtitle">{% if user.est_administrateur %}Supervision de tous les certificats de la plateforme.{% else %}Suivez vos apprenants et délivrez leurs certificats.{% endif %}</p>
+    </div>
+    <div class="page-head-actions">
+        <a href="{% url 'certificates:statistiques' %}" class="btn btn-outline">Statistiques</a>
+        {% if user.est_administrateur %}<a href="{% url 'certificates:export_csv' %}" class="btn btn-outline">Exporter (CSV)</a>{% endif %}
+        {% if not user.en_attente_validation %}<a href="{% url 'certificates:delivrer' %}" class="btn btn-orange">Délivrer un certificat</a>{% endif %}
+    </div>
+</div>
+
+{% if user.en_attente_validation %}
+    <div class="alert alert-warning">Votre compte formateur doit être validé par un administrateur avant de pouvoir délivrer des certificats.</div>
+{% endif %}
+
+<div class="stats">
+    <div class="stat card"><strong>{{ resume.total }}</strong><span>Certificats valides</span></div>
+    <div class="stat card"><strong>{{ resume.ce_mois }}</strong><span>Délivrés ce mois-ci</span></div>
+    <div class="stat card"><strong>{{ resume.apprenants }}</strong><span>Apprenants certifiés</span></div>
+    <div class="stat card"><strong>{% if resume.score_moyen is not None %}{{ resume.score_moyen }} %{% else %}—{% endif %}</strong><span>Score moyen</span></div>
+</div>
+
+<div class="section-head">
+    <h2>Progression des apprenants</h2>
+    {% if progression_resume %}<span class="muted">Moyenne {{ progression_resume.moyenne }} % · {{ progression_resume.termines }} cours terminés sur {{ progression_resume.total }}</span>{% endif %}
+</div>
+{% if progression is None %}
+    {% include "certificates/partials/progression_attente.html" %}
+{% elif progression %}
+    <div class="card table-card">
+        <table class="table">
+            <thead><tr><th>Apprenant</th><th>Cours</th><th>Progression</th><th class="text-right">Certificat</th></tr></thead>
+            <tbody>
+            {% for ligne in progression %}
+                <tr>
+                    <td><div class="user-cell"><span class="avatar">{{ ligne.apprenant.initiales }}</span><strong>{{ ligne.apprenant }}</strong></div></td>
+                    <td>{{ ligne.cours }}</td>
+                    <td>
+                        <div class="progress-cell">
+                            <span class="progress" role="progressbar" aria-valuenow="{{ ligne.progression }}" aria-valuemin="0" aria-valuemax="100"><span style="width: {{ ligne.progression }}%"></span></span>
+                            <strong>{{ ligne.progression }} %</strong>
+                        </div>
+                    </td>
+                    <td class="text-right">
+                        {% if ligne.certifie %}<span class="badge badge-green">Certifié</span>
+                        {% elif ligne.progression >= 100 and not user.en_attente_validation %}
+                            <a class="btn btn-sm btn-green" href="{% url 'certificates:delivrer' %}?apprenant={{ ligne.apprenant.pk }}&cours={{ ligne.cours|urlencode }}">Délivrer</a>
+                        {% else %}<span class="badge badge-muted">En cours</span>{% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="card empty-state"><p class="muted">Aucun apprenant inscrit pour le moment.</p></div>
+{% endif %}
+
+<div class="section-head"><h2>Certificats délivrés</h2></div>
+<form method="get" class="card filtres" role="search" aria-label="Filtrer les certificats">
+    <label for="{{ filtres.q.id_for_label }}" class="sr-only">{{ filtres.q.label }}</label>
+    {{ filtres.q }}
+    <label for="{{ filtres.statut.id_for_label }}" class="sr-only">{{ filtres.statut.label }}</label>
+    {{ filtres.statut }}
+    <button type="submit" class="btn btn-primary">Filtrer</button>
+    {% if params %}<a href="{% url 'certificates:index' %}" class="btn btn-outline">Réinitialiser</a>{% endif %}
+</form>
+
+<div class="card table-card">
+    <table class="table">
+        <thead>
+            <tr><th>Apprenant</th><th>Cours</th><th>Score</th><th>Délivré le</th><th>Statut</th><th class="text-right">Code</th></tr>
+        </thead>
+        <tbody>
+        {% for c in page %}
+            <tr>
+                <td>
+                    <div class="user-cell">
+                        <span class="avatar">{{ c.apprenant.initiales }}</span>
+                        <div><strong>{{ c.apprenant }}</strong><small>{{ c.apprenant.email }}</small></div>
+                    </div>
+                </td>
+                <td>{{ c.titre_cours }}{% if c.nom_formateur and user.est_administrateur %}<small class="muted d-block">{{ c.nom_formateur }}</small>{% endif %}</td>
+                <td>{% if c.score is not None %}{{ c.score }} %{% else %}—{% endif %}</td>
+                <td>{{ c.date_delivrance|date:"d/m/Y" }}</td>
+                <td>{% if c.est_valide %}<span class="badge badge-green">Valide</span>{% else %}<span class="badge badge-rust">Révoqué</span>{% endif %}</td>
+                <td class="text-right"><a href="{{ c.get_absolute_url }}" class="btn btn-sm btn-outline">{{ c.code_verification }}</a></td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="6" class="empty">{% if params %}Aucun certificat ne correspond à ces critères.{% else %}Aucun certificat délivré pour le moment.{% endif %}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if page.has_other_pages %}
+<nav class="pagination">
+    {% if page.has_previous %}<a href="?{{ params }}&page={{ page.previous_page_number }}" class="btn btn-sm btn-outline">Précédent</a>{% endif %}
+    <span>Page {{ page.number }} sur {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a href="?{{ params }}&page={{ page.next_page_number }}" class="btn btn-sm btn-outline">Suivant</a>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}
