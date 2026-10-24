@@ -12,6 +12,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import User
+from apps.certificates.demo import creer_certificats_demo
 from apps.notifications import services
 from apps.notifications.models import Conversation, Message, Notification
 from apps.notifications.moderation import AUTORISE, SIGNALE, ResultatModeration
@@ -73,6 +74,7 @@ class Command(BaseCommand):
             if nouveaux:
                 self.creer_conversations(comptes)
                 self.creer_notifications(comptes)
+                creer_certificats_demo(comptes)
 
         self.afficher_resume(nouveaux)
 

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Page introuvable{% endblock %}
+
+{% block content %}
+<div class="auth-card card">
+    <p class="badge badge-indigo">Erreur 404</p>
+    <h1 class="page-title">Page introuvable</h1>
+    <p class="page-subtitle">Cette page n'existe pas ou a été déplacée. Vérifiez l'adresse, ou repartez de l'accueil.</p>
+    <a href="{% if user.is_authenticated %}{% url 'accounts:dashboard' %}{% else %}{% url 'home' %}{% endif %}" class="btn btn-primary btn-block">
+        {% if user.is_authenticated %}Retour au tableau de bord{% else %}Retour à l'accueil{% endif %}
+    </a>
+</div>
+{% endblock %}

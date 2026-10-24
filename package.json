@@ -9,6 +9,7 @@
     "serveur": "python run.py serveur",
     "rappels": "python run.py rappels --boucle",
     "test": "python run.py test",
+    "couverture": "python run.py couverture",
     "check": "python run.py check",
     "migrate": "python run.py migrate",
     "makemigrations": "python run.py makemigrations",

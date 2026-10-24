@@ -1,0 +1,14 @@
+# Configuration de coverage.py (python run.py couverture)
+[run]
+source = apps
+branch = True
+omit =
+    */migrations/*
+    */tests.py
+    */test_*.py
+    */management/commands/*
+
+[report]
+show_missing = True
+skip_covered = False
+precision = 0

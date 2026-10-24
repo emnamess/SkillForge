@@ -1,0 +1,13 @@
+{% if lignes %}
+    <ol class="classement">
+        {% for l in lignes %}
+            <li>
+                <span>{{ l.nom }}</span>
+                <strong>{{ l.valeur }}</strong>
+                <span class="piste" aria-hidden="true"><span style="width: {{ l.largeur }}%"></span></span>
+            </li>
+        {% endfor %}
+    </ol>
+{% else %}
+    <p class="muted">Aucune donnée pour le moment.</p>
+{% endif %}
