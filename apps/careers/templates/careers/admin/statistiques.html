@@ -1,0 +1,59 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Statistiques Carrière{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/careers.css' %}">{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Statistiques Carrière</h1>
+<p class="page-subtitle">Insertion professionnelle des apprenants : offres, candidatures et compétences demandées.</p>
+{% include "careers/admin/onglets.html" %}
+
+<div class="stats">
+    <div class="stat card"><strong>{{ nb_offres }}</strong><span>Offres</span></div>
+    <div class="stat card"><strong>{{ nb_candidatures }}</strong><span>Candidatures</span></div>
+    <div class="stat card"><strong>{% if taux_acceptation is None %}—{% else %}{{ taux_acceptation }} %{% endif %}</strong><span>Taux d'acceptation (candidatures clôturées)</span></div>
+    <div class="stat card"><strong>{{ delai_moyen_texte }}</strong><span>Délai moyen de première réponse</span></div>
+</div>
+
+{% if entreprises_en_attente or signalements_a_traiter %}
+<div class="stats">
+    {% if entreprises_en_attente %}<a class="stat card stat-alert" href="{% url 'careers:admin_entreprises' %}"><strong>{{ entreprises_en_attente }}</strong><span>Entreprise{{ entreprises_en_attente|pluralize }} à valider</span></a>{% endif %}
+    {% if signalements_a_traiter %}<a class="stat card stat-alert" href="{% url 'careers:admin_signalements' %}"><strong>{{ signalements_a_traiter }}</strong><span>Signalement{{ signalements_a_traiter|pluralize }} à traiter</span></a>{% endif %}
+</div>
+{% endif %}
+
+<div class="grid-2-1">
+    <div class="card">
+        <h2>Top 10 des compétences demandées</h2>
+        {% if top_competences %}
+            <ol class="barres">
+                {% for t in top_competences %}
+                    <li>
+                        <span>{{ t.competence__nom }}</span>
+                        <span class="barre"><span style="width: {{ t.pourcentage }}%"></span></span>
+                        <strong>{{ t.nb_offres }}</strong>
+                    </li>
+                {% endfor %}
+            </ol>
+        {% else %}<p class="muted">Aucune offre diffusée pour l'instant.</p>{% endif %}
+    </div>
+    <div class="colonne-laterale">
+        <div class="card table-card">
+            <table class="table">
+                <thead><tr><th>Statut des offres</th><th class="text-right">Nombre</th></tr></thead>
+                <tbody>{% for libelle, n in offres_par_statut %}<tr><td>{{ libelle }}</td><td class="text-right">{{ n }}</td></tr>{% endfor %}</tbody>
+            </table>
+        </div>
+        <div class="card table-card">
+            <table class="table">
+                <thead><tr><th>Type de contrat</th><th class="text-right">Offres</th></tr></thead>
+                <tbody>
+                {% for libelle, n in par_contrat %}<tr><td>{{ libelle }}</td><td class="text-right">{{ n }}</td></tr>
+                {% empty %}<tr><td colspan="2" class="empty">—</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

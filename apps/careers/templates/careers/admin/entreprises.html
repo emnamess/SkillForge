@@ -1,0 +1,62 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Entreprises · Carrière{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/careers.css' %}">{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Entreprises</h1>
+<p class="page-subtitle">Validez les entreprises avant qu'elles puissent publier des offres. Un refus exige un motif.</p>
+{% include "careers/admin/onglets.html" %}
+
+<div class="onglets">
+    {% for valeur, libelle in statuts %}
+        <a href="?statut={{ valeur }}" class="onglet{% if filtre == valeur %} actif{% endif %}">{{ libelle }}</a>
+    {% endfor %}
+    <a href="?statut=toutes" class="onglet{% if filtre == 'toutes' %} actif{% endif %}">Toutes</a>
+</div>
+
+<div class="card table-card">
+    <table class="table">
+        <thead><tr><th>Entreprise</th><th>Recruteur</th><th>Statut</th><th>Inscrite le</th><th class="text-right">Décision</th></tr></thead>
+        <tbody>
+        {% for e in page %}
+            <tr>
+                <td>
+                    <strong>{{ e.nom }}</strong><br>
+                    <small class="muted">{{ e.secteur }} · {{ e.ville }}{% if e.matricule_fiscal %} · MF {{ e.matricule_fiscal }}{% endif %}</small>
+                    {% if e.site_web %}<br><a href="{{ e.site_web }}" target="_blank" rel="noopener noreferrer"><small>{{ e.site_web }}</small></a>{% endif %}
+                </td>
+                <td>{{ e.utilisateur }}<br><small class="muted">{{ e.utilisateur.email }}</small></td>
+                <td>
+                    <span class="badge {% if e.statut == 'validee' %}badge-green{% elif e.statut == 'refusee' %}badge-rust{% else %}badge-orange{% endif %}">{{ e.get_statut_display }}</span>
+                    {% if e.motif_refus %}<br><small class="muted">{{ e.motif_refus }}</small>{% endif %}
+                </td>
+                <td>{{ e.date_creation|date:"d/m/Y" }}</td>
+                <td>
+                    <div class="actions">
+                    {% if e.statut != "validee" %}
+                        <form method="post" action="{% url 'careers:admin_valider_entreprise' e.pk %}">
+                            {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <button class="btn btn-sm btn-green">Valider</button>
+                        </form>
+                    {% endif %}
+                    </div>
+                    {% if e.statut == "en_attente" %}
+                        <form method="post" action="{% url 'careers:admin_refuser_entreprise' e.pk %}" class="form">
+                            {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <label class="sr-only" for="motif-{{ e.pk }}">Motif du refus</label>
+                            <input type="text" name="motif" id="motif-{{ e.pk }}" required placeholder="Motif du refus">
+                            <button class="btn btn-sm btn-outline">Refuser</button>
+                        </form>
+                    {% endif %}
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="5" class="empty">Aucune entreprise dans cette catégorie.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "careers/partials/pagination.html" %}
+{% endblock %}
