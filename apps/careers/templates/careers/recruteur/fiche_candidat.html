@@ -1,0 +1,97 @@
+{% extends "base_app.html" %}
+{% load static carriere %}
+
+{% block title %}{{ candidature.apprenant }} · {{ candidature.offre.titre }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/careers.css' %}">{% endblock %}
+
+{% block content %}
+<a href="{% url 'careers:kanban' candidature.offre_id %}" class="back-link">← Candidats de « {{ candidature.offre.titre }} »</a>
+
+<div class="grid-2-1">
+    <div>
+        <article class="card">
+            <div class="candidature-entete">
+                <div class="user-cell">
+                    <span class="avatar avatar-lg">{{ candidature.apprenant.initiales }}</span>
+                    <div>
+                        <h1 class="page-title">{{ candidature.apprenant }}</h1>
+                        <small>{{ profil.titre|default:"Apprenant SkillForge" }}{% if profil.ville %} · {{ profil.ville }}{% endif %}</small>
+                    </div>
+                </div>
+                {% include "careers/partials/statut.html" %}
+            </div>
+
+            {% if profil %}
+                {% if profil.presentation %}<p class="description">{{ profil.presentation }}</p>{% endif %}
+                <div class="offre-meta">
+                    {% if profil.disponibilite %}<div><small>Disponibilité</small><strong>{{ profil.disponibilite }}</strong></div>{% endif %}
+                    {% if profil.types_contrat_recherches %}<div><small>Recherche</small><strong>{{ profil.libelles_types_contrat|join:", " }}</strong></div>{% endif %}
+                </div>
+                <div class="badges">
+                    {% if profil.lien_github %}<a href="{{ profil.lien_github }}" target="_blank" rel="noopener noreferrer" class="badge badge-indigo">GitHub</a>{% endif %}
+                    {% if profil.lien_linkedin %}<a href="{{ profil.lien_linkedin }}" target="_blank" rel="noopener noreferrer" class="badge badge-indigo">LinkedIn</a>{% endif %}
+                    {% if profil.lien_portfolio %}<a href="{{ profil.lien_portfolio }}" target="_blank" rel="noopener noreferrer" class="badge badge-indigo">Portfolio</a>{% endif %}
+                </div>
+                <h2 class="avec-marge">Compétences déclarées</h2>
+                <ul class="competences-tags">
+                    {% for c in profil.competences.all %}<li>{{ c.competence }} · {{ c.get_niveau_display }}</li>{% empty %}<li>Aucune</li>{% endfor %}
+                </ul>
+            {% endif %}
+
+            {% if candidature.lettre_motivation %}
+                <h2 class="avec-marge">Lettre de motivation</h2>
+                <p class="description">{{ candidature.lettre_motivation }}</p>
+            {% endif %}
+            {% if candidature.cv_depose %}
+                <p class="avec-marge"><a href="{% url 'careers:cv_candidature' candidature.pk %}" class="btn btn-outline" target="_blank" rel="noopener">Télécharger le CV déposé</a></p>
+            {% else %}
+                <p class="muted">Aucun CV joint à cette candidature.</p>
+            {% endif %}
+        </article>
+
+        <article class="card avec-marge">
+            <h2>Historique</h2>
+            {% include "careers/partials/frise.html" with historique=historique %}
+        </article>
+    </div>
+
+    <aside class="colonne-laterale">
+        <div class="card">
+            {% jauge compatibilite %}
+            {% if candidature.score_au_depot is not None and candidature.score_au_depot != compatibilite.score %}
+                <p class="muted">Score au dépôt : {{ candidature.score_au_depot }} %</p>
+            {% endif %}
+            <h2 class="avec-marge">Écart de compétences</h2>
+            {% include "careers/partials/ecart.html" with ecarts=ecarts %}
+        </div>
+
+        {% if statuts_possibles %}
+        <form method="post" action="{% url 'careers:changer_statut' candidature.pk %}" class="form card">
+            {% csrf_token %}
+            <h2>Changer le statut</h2>
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <label for="statut">Nouveau statut</label>
+            <select name="statut" id="statut">
+                {% for s in statuts_possibles %}{% if s.value != "entretien" %}<option value="{{ s.value }}">{{ s.label }}</option>{% endif %}{% endfor %}
+            </select>
+            <label for="commentaire">Message au candidat (facultatif)</label>
+            <textarea name="commentaire" id="commentaire" rows="2"></textarea>
+            <button type="submit" class="btn btn-outline btn-block">Valider</button>
+        </form>
+        {% endif %}
+
+        {% if candidature.statut == "en_examen" or candidature.statut == "entretien" %}
+        <form method="post" action="{% url 'careers:planifier_entretien' candidature.pk %}" class="form card">
+            {% csrf_token %}
+            <h2>{% if candidature.statut == "entretien" %}Replanifier l'entretien{% else %}Planifier un entretien{% endif %}</h2>
+            {% include "partials/form_field.html" with field=form_entretien.date_entretien %}
+            {% include "partials/form_field.html" with field=form_entretien.lieu_ou_lien_entretien %}
+            {% include "partials/form_field.html" with field=form_entretien.commentaire %}
+            <button type="submit" class="btn btn-primary btn-block">Convoquer</button>
+        </form>
+        {% elif candidature.statut == "envoyee" %}
+            <p class="muted">Passez la candidature « En examen » pour pouvoir planifier un entretien.</p>
+        {% endif %}
+    </aside>
+</div>
+{% endblock %}

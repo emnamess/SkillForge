@@ -1,0 +1,56 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Mes offres{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/careers.css' %}">{% endblock %}
+
+{% block content %}
+<div class="page-entete">
+    <div>
+        <h1 class="page-title">Mes offres</h1>
+        <p class="page-subtitle">Créez, publiez, dupliquez et fermez vos offres.</p>
+    </div>
+    <a href="{% url 'careers:offre_creer' %}" class="btn btn-primary">Nouvelle offre</a>
+</div>
+
+<div class="onglets">
+    <a href="?" class="onglet{% if not filtre %} actif{% endif %}">Toutes</a>
+    {% for valeur, libelle in statuts %}
+        <a href="?statut={{ valeur }}" class="onglet{% if filtre == valeur %} actif{% endif %}">{{ libelle }}</a>
+    {% endfor %}
+</div>
+
+<div class="card table-card">
+    <table class="table">
+        <thead><tr><th>Offre</th><th>Statut</th><th>Candidatures</th><th>Date limite</th><th class="text-right">Actions</th></tr></thead>
+        <tbody>
+        {% for offre in page %}
+            <tr>
+                <td><a href="{{ offre.get_absolute_url }}"><strong>{{ offre.titre }}</strong></a><br><small class="muted">{{ offre.get_type_contrat_display }} · {{ offre.get_mode_travail_display }} · {{ offre.ville }}</small></td>
+                <td>
+                    {% with s=offre.statut_effectif %}
+                    <span class="badge {% if s == 'publiee' %}badge-green{% elif s == 'brouillon' %}badge-muted{% elif s == 'suspendue' %}badge-rust{% else %}badge-orange{% endif %}">{{ offre.get_statut_effectif_display }}</span>
+                    {% endwith %}
+                </td>
+                <td>{{ offre.nb_candidatures }}{% if offre.nb_nouvelles %} <span class="badge badge-indigo">{{ offre.nb_nouvelles }} nouvelle{{ offre.nb_nouvelles|pluralize }}</span>{% endif %}</td>
+                <td>{{ offre.date_limite|date:"d/m/Y"|default:"—" }}</td>
+                <td class="actions">
+                    <a href="{% url 'careers:kanban' offre.pk %}" class="btn btn-sm btn-primary">Candidats</a>
+                    <a href="{% url 'careers:offre_modifier' offre.pk %}" class="btn btn-sm btn-outline">Modifier</a>
+                    {% if offre.statut == "brouillon" or offre.statut == "fermee" %}
+                        <form method="post" action="{% url 'careers:offre_publier' offre.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn btn-sm btn-green">Publier</button></form>
+                    {% elif offre.statut == "publiee" %}
+                        <form method="post" action="{% url 'careers:offre_fermer' offre.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn btn-sm btn-outline">Fermer</button></form>
+                    {% endif %}
+                    <form method="post" action="{% url 'careers:offre_dupliquer' offre.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline">Dupliquer</button></form>
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="5" class="empty">Aucune offre pour l'instant.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include "careers/partials/pagination.html" %}
+{% endblock %}
