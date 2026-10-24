@@ -4,11 +4,12 @@ from django.utils.text import slugify
 
 
 class User(AbstractUser):
-    """Utilisateur de SkillForge : apprenant, formateur ou administrateur."""
+    """Utilisateur de SkillForge : apprenant, formateur, recruteur ou administrateur."""
 
     class Role(models.TextChoices):
         APPRENANT = "apprenant", "Apprenant"
         FORMATEUR = "formateur", "Formateur"
+        RECRUTEUR = "recruteur", "Recruteur"
         ADMINISTRATEUR = "administrateur", "Administrateur"
 
     email = models.EmailField("adresse e-mail", unique=True)
@@ -57,6 +58,11 @@ class User(AbstractUser):
     @property
     def est_formateur(self):
         return self.role == self.Role.FORMATEUR
+
+    @property
+    def est_recruteur(self):
+        """Recruteur d'entreprise : sa validation est portée par careers (ProfilEntreprise.statut)."""
+        return self.role == self.Role.RECRUTEUR
 
     @property
     def est_administrateur(self):

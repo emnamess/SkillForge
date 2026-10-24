@@ -14,6 +14,7 @@ urlpatterns = [
     path("mentorat/", include("apps.mentoring.urls")),
     path("certificats/", include("apps.certificates.urls")),
     path("notifications/", include("apps.notifications.urls")),
+    path("carriere/", include("apps.careers.urls")),
 ]
 
 if settings.DEBUG:
