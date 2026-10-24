@@ -39,6 +39,25 @@
     </div>
 {% endif %}
 
+<section class="reco" aria-labelledby="reco-titre" data-recommandations="{% url 'certificates:recommandations' %}">
+    <div class="section-head">
+        <h2 id="reco-titre">Certifications recommandées pour vous <span class="badge badge-orange">IA</span></h2>
+        <a href="{% url 'accounts:profil' %}" class="muted">Affiner avec ma présentation</a>
+    </div>
+    <div class="reco-grid" data-reco-liste aria-live="polite" aria-busy="true">
+        {% for i in "123" %}
+            <div class="card reco-card reco-squelette" aria-hidden="true"><span></span><span></span><span></span></div>
+        {% endfor %}
+        <p class="sr-only" data-reco-chargement>Calcul des recommandations en cours…</p>
+    </div>
+    <div class="alert alert-error reco-erreur" data-reco-erreur role="alert" hidden>
+        <span data-reco-erreur-texte>Les recommandations n'ont pas pu être chargées.</span>
+        <button type="button" class="btn btn-sm btn-outline" data-reco-reessayer>Réessayer</button>
+    </div>
+    <p class="muted reco-note" data-reco-note hidden></p>
+    <noscript><p class="muted">Activez JavaScript pour afficher vos recommandations.</p></noscript>
+</section>
+
 <h2 class="section-title">Ma progression</h2>
 {% if progression is None %}
     {% include "certificates/partials/progression_attente.html" %}
@@ -59,3 +78,5 @@
     <div class="card empty-state"><p class="muted">Vous n'êtes inscrit à aucun cours pour le moment.</p></div>
 {% endif %}
 {% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/certificates.js' %}" defer></script>{% endblock %}

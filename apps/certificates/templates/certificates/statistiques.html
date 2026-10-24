@@ -11,7 +11,12 @@
         <h1 class="page-title">Statistiques</h1>
         <p class="page-subtitle">{% if user.est_administrateur %}Vue d'ensemble de la plateforme SkillForge.{% else %}Les certificats de vos cours.{% endif %}</p>
     </div>
-    {% if user.est_administrateur %}<a href="{% url 'certificates:export_csv' %}" class="btn btn-outline">Exporter les certificats (CSV)</a>{% endif %}
+    {% if user.est_administrateur %}
+        <div class="page-head-actions">
+            <a href="{% url 'certificates:performance_recommandations' %}" class="btn btn-outline">Performance de l'IA</a>
+            <a href="{% url 'certificates:export_csv' %}" class="btn btn-outline">Exporter les certificats (CSV)</a>
+        </div>
+    {% endif %}
 </div>
 
 {% if utilisateurs %}

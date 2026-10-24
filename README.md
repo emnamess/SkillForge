@@ -266,6 +266,27 @@ delivrer_si_eligible(inscription.apprenant, cours.titre, progression=inscription
 Le suivi de progression lit `courses.Inscription` (`apprenant`, `cours`, `progression`, `date_inscription`) dès que ce
 modèle existe ; les noms de champs se règlent dans `apps/certificates/progression.py`.
 
+### Recommandation de certifications (IA)
+
+Sur **Mes certificats**, chaque apprenant reçoit 3 certifications recommandées, avec leurs raisons et les compétences
+qu'elles lui feraient acquérir. Le moteur (`apps/certificates/recommandation.py`, scikit-learn) est **hybride** :
+
+- **filtrage par contenu** : vecteurs TF-IDF des cours (titre + compétences) comparés au profil de l'apprenant
+  (compétences validées + présentation de son profil), similarité cosinus ;
+- **filtrage collaboratif** : « ceux qui ont obtenu X ont aussi obtenu Y » (similarité entre cours sur la matrice
+  apprenants × cours) ;
+- score final = α × contenu + (1 − α) × collaboratif (α = 0,4, réglable avec `RECOMMANDATION_ALPHA`) ; un nouvel
+  apprenant sans certificat reçoit un mélange de son profil et des cours les plus populaires.
+
+| URL | Page |
+|---|---|
+| `/certificats/recommandations/` | API JSON des recommandations de l'utilisateur connecté |
+| `/certificats/recommandations/performance/` | Métriques du modèle (administrateur) : HitRate@3, Precision@3, MRR, NDCG@3, temps de réponse |
+
+Le modèle s'entraîne en quelques millisecondes et reste en cache tant que les certificats ne changent pas.
+`python run.py demo` crée aussi 40 apprenants **simulés** (`@sim.skillforge.tn`, parcours générés) pour que le moteur
+ait assez de données ; à remplacer par les vraies données quand le module Cours sera fusionné.
+
 ### Couverture des tests
 
 ```bash

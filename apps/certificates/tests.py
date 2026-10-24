@@ -411,3 +411,156 @@ class FiltresTests(Base):
         self.assertContains(r, a.code_verification)
         self.assertNotContains(r, b.code_verification)
         self.assertContains(self.client.get(url, {"q": "introuvable"}), "Aucun certificat ne correspond")
+
+
+# ---------- Moteur de recommandation (IA) ----------
+
+from django.core.cache import cache as cache_django  # noqa: E402
+
+from . import recommandation  # noqa: E402
+from .demo import CATALOGUE, creer_apprenants_simules  # noqa: E402
+
+
+class RecommandationModeleTests(TestCase):
+    """Tests du modèle seul, sur des données construites à la main (pas de base de données)."""
+
+    def setUp(self):
+        self.catalogue = {
+            "uml": recommandation.Cours("uml", "UML", ["Diagramme de classes", "Héritage"]),
+            "patterns": recommandation.Cours("patterns", "Design patterns", ["Héritage", "Patrons de conception"]),
+            "sql": recommandation.Cours("sql", "SQL", ["Jointures", "Index"]),
+            "bd": recommandation.Cours("bd", "Bases de données", ["Modèle relationnel", "Normalisation"]),
+            "ml": recommandation.Cours("ml", "Machine learning", ["Classification", "Régression", "Python data"]),
+        }
+        # Les apprenants 1 à 4 enchaînent BD puis SQL ; 5 et 6 font UML puis Design patterns
+        couples = [(u, c) for u in (1, 2, 3, 4) for c in ("bd", "sql")] + [(5, "uml"), (5, "patterns"),
+                                                                           (6, "uml"), (6, "patterns"), (7, "bd")]
+        self.modele = recommandation.ModeleRecommandation(self.catalogue, couples, alpha=0.5)
+
+    def titres(self, *args, **kwargs):
+        return [r.titre for r in self.modele.recommander(*args, **kwargs)]
+
+    def test_collaboratif_apprend_les_parcours(self):
+        self.assertEqual(self.modele.classement(["bd"], methode="collaboratif")[0][0], "sql")
+
+    def test_contenu_utilise_les_competences_communes(self):
+        self.assertEqual(self.modele.classement(["uml"], methode="contenu")[0][0], "patterns")
+
+    def test_hybride_recommande_et_explique(self):
+        recos = self.modele.recommander({"uml"})
+        self.assertEqual(recos[0].titre, "Design patterns")
+        self.assertEqual(recos[0].source, "hybride")
+        self.assertTrue(any("Héritage" in r for r in recos[0].raisons))
+        self.assertTrue(any("100 % des apprenants" in r for r in recos[0].raisons))
+        self.assertEqual(recos[0].competences_nouvelles, ["Patrons de conception"])
+
+    def test_n_exclut_jamais_un_cours_deja_obtenu(self):
+        for deja in ({"bd"}, {"uml", "patterns"}, {"bd", "sql", "uml"}):
+            self.assertFalse(set(self.titres(deja, k=5)) & {self.catalogue[c].titre for c in deja})
+
+    def test_profil_seul_suffit(self):
+        self.assertEqual(self.titres(set(), "Je veux apprendre le machine learning et la classification")[0],
+                         "Machine learning")
+
+    def test_demarrage_a_froid_sans_rien(self):
+        recos = self.modele.recommander(set(), "")
+        self.assertEqual(recos[0].source, "populaires")
+        self.assertEqual(recos[0].titre, "Bases de données")  # le cours le plus obtenu
+
+    def test_scores_bornes_et_k_respecte(self):
+        recos = self.modele.recommander({"bd"}, k=2)
+        self.assertEqual(len(recos), 2)
+        self.assertTrue(all(0 <= r.score <= 1 for r in recos))
+
+    def test_catalogue_vide(self):
+        modele = recommandation.ModeleRecommandation({}, [])
+        self.assertEqual(modele.recommander(set()), [])
+
+
+class RecommandationIntegrationTests(Base):
+    def setUp(self):
+        super().setUp()
+        cache_django.clear()
+        comptes = {"karim": self.karim, "leila": self.leila}
+        creer_apprenants_simules(comptes, nombre=24)
+
+    def test_catalogue_construit_depuis_les_certificats(self):
+        catalogue = recommandation.construire_catalogue(list(Certificat.objects.all()))
+        self.assertTrue(set(catalogue) <= {Certificat.normaliser_titre(t) for t in CATALOGUE})
+        sql = catalogue[Certificat.normaliser_titre("SQL avancé")]
+        self.assertEqual(set(sql.competences), set(CATALOGUE["SQL avancé"]))
+
+    def test_api_json(self):
+        self.certificat(cours="Modélisation UML", competences=CATALOGUE["Modélisation UML"])
+        self.client.force_login(self.yasmine)
+        r = self.client.get(reverse("certificates:recommandations"))
+        self.assertEqual(r.status_code, 200)
+        donnees = r.json()
+        self.assertEqual(len(donnees["recommandations"]), 3)
+        self.assertEqual(donnees["source"], "hybride")
+        self.assertNotIn("Modélisation UML", [x["titre"] for x in donnees["recommandations"]])
+        self.assertIn("Design patterns", [x["titre"] for x in donnees["recommandations"]])
+        self.assertIsInstance(donnees["duree_ms"], float)
+
+    def test_api_exige_connexion(self):
+        self.assertEqual(self.client.get(reverse("certificates:recommandations")).status_code, 302)
+
+    def test_api_erreur_moteur_message_clair(self):
+        from unittest import mock
+        self.client.force_login(self.yasmine)
+        with mock.patch.object(recommandation, "recommandations_pour", side_effect=RuntimeError("panne")):
+            r = self.client.get(reverse("certificates:recommandations"))
+        self.assertEqual(r.status_code, 503)
+        self.assertIn("indisponibles", r.json()["erreur"])
+
+    def test_modele_mis_en_cache_et_reentraine_si_donnees_changent(self):
+        premier = recommandation.modele_courant()
+        self.assertIs(recommandation.modele_courant(), premier)
+        self.certificat(cours="Nouveau cours", competences=["Compétence inédite"])
+        self.assertIsNot(recommandation.modele_courant(), premier)
+
+    def test_evaluation_metriques_coherentes(self):
+        res = recommandation.evaluer(repetitions=2)
+        self.assertGreater(res["nb_apprenants_testes"], 5)
+        methodes = {m["methode"]: m for m in res["methodes"]}
+        self.assertEqual(set(methodes), {"populaires", "contenu", "collaboratif", "hybride"})
+        for m in methodes.values():
+            self.assertTrue(0 <= m["precision"] <= m["hit_rate"] <= 1)
+            self.assertAlmostEqual(m["precision"], m["hit_rate"] / res["k"])
+            self.assertTrue(0 <= m["ndcg"] <= m["hit_rate"])
+        # Sur des parcours structurés, le modèle doit battre la référence naïve
+        self.assertGreater(methodes["hybride"]["hit_rate"], methodes["populaires"]["hit_rate"])
+
+    def test_evaluation_demarrage_a_froid(self):
+        res = recommandation.evaluer_demarrage_a_froid()
+        self.assertGreater(res["nb_apprenants_testes"], 0)
+        self.assertEqual([m["methode"] for m in res["methodes"]], ["populaires", "hybride"])
+
+    def test_page_performance_admin_seulement(self):
+        url = reverse("certificates:performance_recommandations")
+        for user in (self.yasmine, self.karim):
+            self.client.force_login(user)
+            self.assertEqual(self.client.get(url).status_code, 403)
+        self.client.force_login(self.admin)
+        r = self.client.get(url)
+        self.assertContains(r, "HitRate@3")
+        self.assertContains(r, "Hybride (modèle utilisé)")
+        self.assertContains(r, "Nouvel apprenant")
+
+    def test_page_mes_certificats_contient_la_zone_ia(self):
+        self.client.force_login(self.yasmine)
+        r = self.client.get(reverse("certificates:index"))
+        self.assertContains(r, "Certifications recommandées pour vous")
+        self.assertContains(r, reverse("certificates:recommandations"))
+
+
+class RecommandationSansDonneesTests(Base):
+    def test_page_performance_sans_donnees(self):
+        cache_django.clear()
+        self.client.force_login(self.admin)
+        self.assertContains(self.client.get(reverse("certificates:performance_recommandations")),
+                            "Pas assez de données")
+
+    def test_api_sans_aucun_certificat(self):
+        self.client.force_login(self.yasmine)
+        self.assertEqual(self.client.get(reverse("certificates:recommandations")).json()["recommandations"], [])

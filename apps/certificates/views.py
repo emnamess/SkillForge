@@ -1,6 +1,10 @@
 import csv
+import logging
+import time
 
 from django.contrib import messages
+from django.core.cache import cache
+from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
@@ -13,10 +17,12 @@ from django.views.decorators.http import require_POST
 from apps.accounts.decorators import admin_required, role_required
 from apps.accounts.models import User
 
-from . import progression, services, stats
+from . import progression, recommandation, services, stats
 from .forms import (DelivrerCertificatForm, FiltreCertificatsForm, ModifierCertificatForm, RevocationForm,
                     VerificationForm)
 from .models import Certificat
+
+logger = logging.getLogger(__name__)
 
 
 def certificats_visibles(user):
@@ -176,6 +182,61 @@ def statistiques(request):
         contexte = stats.statistiques_formateur(user)
     contexte["progression"] = stats.resume_progression(user)
     return render(request, "certificates/statistiques.html", contexte)
+
+
+# ---------- Recommandations (IA) ----------
+
+@login_required
+def recommandations_api(request):
+    """API JSON : certifications recommandées à l'utilisateur connecté (appelée par la page Mes certificats)."""
+    try:
+        resultats, duree_ms = recommandation.recommandations_pour(request.user)
+    except Exception:  # le moteur ne doit jamais casser la page : on renvoie une erreur claire
+        logger.exception("Échec du moteur de recommandation pour l'utilisateur %s", request.user.pk)
+        return JsonResponse({"erreur": "Les recommandations sont momentanément indisponibles. Réessayez plus tard."},
+                            status=503)
+    return JsonResponse({
+        "recommandations": [r.en_dict() for r in resultats],
+        "duree_ms": round(duree_ms, 1),
+        "source": resultats[0].source if resultats else None,
+    })
+
+
+@admin_required
+def performance_recommandations(request):
+    """Métriques du moteur de recommandation (évaluation hors ligne), mises en cache tant que les données ne
+    changent pas."""
+    certificats = Certificat.objects.filter(statut=Certificat.Statut.VALIDE)
+    version = (certificats.count(), certificats.order_by("-pk").values_list("pk", flat=True).first(),
+               recommandation.alpha_par_defaut())
+    cle = f"certificats:performance-reco:{hash(version)}"
+    contexte = cache.get(cle)
+    if contexte is None or request.GET.get("recalculer"):
+        debut = time.perf_counter()
+        contexte = {
+            "evaluation": recommandation.evaluer(),
+            "demarrage": recommandation.evaluer_demarrage_a_froid(),
+            "alphas": recommandation.comparer_alphas(),
+        }
+        contexte["duree_evaluation_s"] = time.perf_counter() - debut
+        contexte["latence"] = mesurer_latence()
+        contexte["calcule_le"] = timezone.now()
+        cache.set(cle, contexte, 60 * 60)
+
+    meilleur = max((m["hit_rate"] for m in contexte["evaluation"]["methodes"]), default=0) or 1
+    for m in contexte["evaluation"]["methodes"]:
+        m["largeur"] = round(100 * m["hit_rate"] / meilleur)
+    return render(request, "certificates/performance.html", contexte)
+
+
+def mesurer_latence(nb=20):
+    """Temps de réponse réel du moteur (modèle en cache) sur quelques apprenants."""
+    apprenants = list(User.objects.filter(role=User.Role.APPRENANT, certificats__isnull=False).distinct()[:nb])
+    durees = sorted(recommandation.recommandations_pour(u)[1] for u in apprenants)
+    if not durees:
+        return None
+    return {"moyenne": sum(durees) / len(durees), "max": durees[-1],
+            "p95": durees[min(len(durees) - 1, round(0.95 * (len(durees) - 1)))], "nb": len(durees)}
 
 
 @admin_required

@@ -11,3 +11,6 @@ google-genai>=1.0
 
 # Tests : rapport de couverture (python run.py couverture)
 coverage>=7.6
+
+# Moteur de recommandation de certifications (TF-IDF, similarité cosinus)
+scikit-learn>=1.5
