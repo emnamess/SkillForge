@@ -1,0 +1,22 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Supprimer la question{% endblock %}
+
+{% block content %}
+<a href="{% url 'quizzes:questions_gerer' quiz.pk %}" class="back-link">← Questions du quiz</a>
+
+<div class="card form-narrow" style="margin-top:1rem;">
+    <h2 style="color:var(--rust);">⚠ Supprimer la question</h2>
+    <p>Voulez-vous vraiment supprimer la question suivante ?</p>
+    <div style="padding:1rem; background:var(--rust-soft); border-radius:8px; margin:1rem 0;">
+        <strong>Q{{ question.ordre }} :</strong> {{ question.enonce }}
+    </div>
+    <p class="muted" style="font-size:0.9rem;">Cette action est irréversible. Les réponses des apprenants à cette question seront également supprimées.</p>
+    <form method="post" style="display:flex; gap:0.75rem; margin-top:1rem;">
+        {% csrf_token %}
+        <a href="{% url 'quizzes:questions_gerer' quiz.pk %}" class="btn btn-outline">Annuler</a>
+        <button type="submit" class="btn" style="background:var(--rust);color:white;">Supprimer définitivement</button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Mes résultats{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/quizzes.css' %}">
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'quizzes:index' %}" class="back-link">← Quiz disponibles</a>
+
+<h1 class="page-title">Mes résultats</h1>
+<p class="page-subtitle">Historique de toutes vos tentatives</p>
+
+{% if tentatives %}
+<div class="card table-card">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Quiz</th>
+                <th>Score</th>
+                <th>Pourcentage</th>
+                <th>Résultat</th>
+                <th>Date</th>
+                <th class="text-right">Détails</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tentative in tentatives %}
+            <tr>
+                <td>
+                    <a href="{% url 'quizzes:quiz_detail' tentative.quiz.pk %}" style="font-weight:500;">{{ tentative.quiz.titre }}</a>
+                </td>
+                <td>{{ tentative.score }}/{{ tentative.score_total }}</td>
+                <td><strong>{{ tentative.pourcentage }}%</strong></td>
+                <td>
+                    {% if tentative.reussie %}
+                    <span class="badge badge-green">✅ Réussi</span>
+                    {% else %}
+                    <span class="badge badge-rust">❌ Non réussi</span>
+                    {% endif %}
+                </td>
+                <td class="muted">{{ tentative.date_debut|date:"d/m/Y" }}</td>
+                <td class="text-right">
+                    <a href="{% url 'quizzes:tentative_detail' tentative.pk %}" class="btn btn-outline btn-sm">Voir la correction</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card empty-state">
+    <p style="font-size:2.5rem; margin:0;">📊</p>
+    <p>Vous n'avez encore passé aucun quiz.</p>
+    <a href="{% url 'quizzes:index' %}" class="btn btn-primary" style="margin-top:1rem;">Voir les quiz disponibles</a>
+</div>
+{% endif %}
+{% endblock %}

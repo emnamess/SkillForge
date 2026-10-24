@@ -1,0 +1,194 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Supervision des Quiz · Administration{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/quizzes.css' %}">
+<style>
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .kpi-card {
+        padding: 1.25rem;
+        border-radius: var(--radius);
+        background: var(--white);
+        border: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+    .kpi-value {
+        font: 700 1.8rem var(--font-title);
+        color: var(--navy);
+    }
+    .kpi-label {
+        font-size: 0.85rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+    .kpi-detail {
+        font-size: 0.8rem;
+        color: var(--indigo);
+        margin-top: 0.2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+    <div>
+        <a href="{% url 'quizzes:index' %}" class="back-link">← Retour aux quiz</a>
+        <h1 class="page-title">Supervision globale des Quiz</h1>
+        <p class="page-subtitle">Tableau de bord administrateur : statistiques globales et modération de l'IA</p>
+    </div>
+    <div style="display:flex; gap:0.5rem;">
+        <a href="{% url 'quizzes:index' %}" class="btn btn-outline">Gérer mes quiz</a>
+    </div>
+</div>
+
+<!-- KPIs globaux -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <span class="kpi-label">Quiz créés</span>
+        <span class="kpi-value">{{ stats.nb_quiz }}</span>
+        <span class="kpi-detail">{{ stats.nb_publies }} publiés ({{ stats.nb_quiz|add:"-"|add:stats.nb_publies }} brouillons)</span>
+    </div>
+    <div class="kpi-card">
+        <span class="kpi-label">Questions totales</span>
+        <span class="kpi-value">{{ stats.nb_questions }}</span>
+        <span class="kpi-detail">{{ stats.nb_qcm }} QCM · {{ stats.nb_texte_libre }} avec IA</span>
+    </div>
+    <div class="kpi-card">
+        <span class="kpi-label">Tentatives passées</span>
+        <span class="kpi-value">{{ stats.nb_tentatives }}</span>
+        <span class="kpi-detail">Par l'ensemble des apprenants</span>
+    </div>
+    <div class="kpi-card">
+        <span class="kpi-label">Moyenne plateforme</span>
+        <span class="kpi-value">{{ stats.taux_reussite_global|floatformat:1 }}%</span>
+        <span class="kpi-detail">Taux de réussite global</span>
+    </div>
+    <div class="kpi-card" style="border-left: 3px solid var(--indigo);">
+        <span class="kpi-label">Corrections par IA</span>
+        <span class="kpi-value">{{ stats.nb_corrections_ia }}</span>
+        <span class="kpi-detail">Analyses sémantiques Gemini</span>
+    </div>
+</div>
+
+<!-- Liste de tous les quiz avec contrôle de publication -->
+<div class="card table-card" style="margin-bottom:2rem;">
+    <div style="padding:1.25rem 1.5rem 0.5rem; display:flex; justify-content:space-between; align-items:center;">
+        <h2 style="margin:0; font-size:1.15rem;">Catalogue de tous les Quiz de la plateforme</h2>
+        <span class="muted" style="font-size:0.85rem;">{{ quizzes|length }} quiz enregistrés</span>
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Titre du quiz</th>
+                <th>Formateur</th>
+                <th>Questions</th>
+                <th>Tentatives</th>
+                <th>Moyenne</th>
+                <th>Statut</th>
+                <th class="text-right">Actions rapides</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for quiz in quizzes %}
+            <tr>
+                <td>
+                    <a href="{% url 'quizzes:quiz_detail' quiz.pk %}" style="font-weight:600; color:var(--navy);">{{ quiz.titre }}</a>
+                    {% if quiz.duree_minutes %}<small class="muted" style="display:block;">⏱ {{ quiz.duree_minutes }} min</small>{% endif %}
+                </td>
+                <td>
+                    <div style="font-size:0.9rem;">
+                        <strong>{{ quiz.formateur.get_full_name|default:quiz.formateur.username }}</strong>
+                        <small class="muted" style="display:block;">{{ quiz.formateur.email }}</small>
+                    </div>
+                </td>
+                <td>{{ quiz.nb_q }}</td>
+                <td>{{ quiz.nb_t }}</td>
+                <td>
+                    {% if quiz.moyenne %}
+                        <strong>{{ quiz.moyenne|floatformat:1 }}%</strong>
+                    {% else %}
+                        <span class="muted">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if quiz.est_publie %}
+                        <span class="badge badge-green">Publié</span>
+                    {% else %}
+                        <span class="badge badge-muted">Brouillon</span>
+                    {% endif %}
+                </td>
+                <td class="text-right">
+                    <div class="actions">
+                        <a href="{% url 'quizzes:quiz_resultats' quiz.pk %}" class="btn btn-sm btn-outline">Stats</a>
+                        <a href="{% url 'quizzes:quiz_toggle_publication' quiz.pk %}" class="btn btn-sm" style="{% if quiz.est_publie %}background:var(--rust-soft); color:var(--rust);{% else %}background:var(--green-soft); color:var(--green);{% endif %}">
+                            {% if quiz.est_publie %}Dépublier{% else %}Publier{% endif %}
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Dernières tentatives sur la plateforme -->
+<div class="card table-card">
+    <div style="padding:1.25rem 1.5rem 0.5rem;">
+        <h2 style="margin:0; font-size:1.15rem;">Dernières tentatives sur la plateforme</h2>
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Apprenant</th>
+                <th>Quiz</th>
+                <th>Date</th>
+                <th>Score</th>
+                <th>Pourcentage</th>
+                <th>Résultat</th>
+                <th class="text-right">Détails</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in dernieres_tentatives %}
+            <tr>
+                <td>
+                    <strong>{{ t.apprenant.get_full_name|default:t.apprenant.username }}</strong>
+                    <small class="muted" style="display:block;">{{ t.apprenant.email }}</small>
+                </td>
+                <td>{{ t.quiz.titre }}</td>
+                <td class="muted">{{ t.date_debut|date:"d/m/Y H:i" }}</td>
+                <td>{{ t.score }}/{{ t.score_total }}</td>
+                <td><strong>{{ t.pourcentage }}%</strong></td>
+                <td>
+                    {% if t.reussie %}
+                        <span class="badge badge-green">✅ Réussi</span>
+                    {% else %}
+                        <span class="badge badge-rust">❌ Non réussi</span>
+                    {% endif %}
+                </td>
+                <td class="text-right">
+                    <a href="{% url 'quizzes:tentative_detail' t.pk %}" class="btn btn-outline btn-sm">Examiner</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="text-center muted" style="padding:2rem;">Aucune tentative enregistrée pour l'instant.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

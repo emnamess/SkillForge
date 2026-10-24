@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Attestation de Réussite · {{ tentative.quiz.titre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: #f5f4ef;
+        padding: 2rem 1rem;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .attestation-container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: #ffffff;
+        border: 12px double #2c2543;
+        padding: 3.5rem 3rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        text-align: center;
+        position: relative;
+    }
+    .attestation-header {
+        margin-bottom: 2rem;
+    }
+    .attestation-logo {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #2c2543;
+        letter-spacing: 1px;
+    }
+    .attestation-sublogo {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        color: #6c5ce7;
+        font-weight: 600;
+        letter-spacing: 2px;
+        margin-top: 0.2rem;
+    }
+    .attestation-title {
+        font-size: 2.2rem;
+        color: #1a162b;
+        margin: 1.5rem 0 0.5rem;
+        font-family: Georgia, serif;
+    }
+    .attestation-certifie {
+        font-size: 1.1rem;
+        color: #555;
+        font-style: italic;
+        margin-bottom: 1.5rem;
+    }
+    .attestation-nom {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #6c5ce7;
+        border-bottom: 2px solid #e2ddf3;
+        display: inline-block;
+        padding: 0 2rem 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .attestation-texte {
+        font-size: 1.1rem;
+        line-height: 1.7;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto 2rem;
+    }
+    .attestation-score {
+        display: inline-block;
+        background: #f0edf8;
+        padding: 0.5rem 1.5rem;
+        border-radius: 999px;
+        font-weight: 700;
+        color: #2c2543;
+        font-size: 1.15rem;
+        margin-bottom: 2.5rem;
+    }
+    .attestation-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        border-top: 1px solid #eee;
+        padding-top: 2rem;
+        margin-top: 2rem;
+        text-align: left;
+    }
+    .attestation-signature {
+        text-align: right;
+    }
+    .signature-ligne {
+        width: 180px;
+        border-bottom: 1px solid #333;
+        margin-top: 2rem;
+        margin-bottom: 0.3rem;
+    }
+    .no-print {
+        margin: 1.5rem auto 0;
+        max-width: 800px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    @media print {
+        body {
+            background: none;
+            padding: 0;
+        }
+        .no-print {
+            display: none !important;
+        }
+        .attestation-container {
+            box-shadow: none;
+            border-width: 8px;
+            margin: 0;
+            max-width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="no-print">
+    <a href="{% url 'quizzes:tentative_detail' tentative.pk %}" style="text-decoration:none; color:#6c5ce7; font-weight:600;">
+        ← Retour aux résultats
+    </a>
+    <button onclick="window.print()" style="background:#6c5ce7; color:white; border:none; padding:0.6rem 1.5rem; border-radius:6px; font-weight:600; cursor:pointer;">
+        🖨️ Imprimer / Télécharger en PDF
+    </button>
+</div>
+
+<div class="attestation-container" id="certificat">
+    <div class="attestation-header">
+        <div class="attestation-logo">SkillForge</div>
+        <div class="attestation-sublogo">Plateforme e-Learning & Évaluation IA</div>
+    </div>
+
+    <h1 class="attestation-title">Attestation de Réussite</h1>
+    <div class="attestation-certifie">Cette attestation d'excellence est fièrement décernée à :</div>
+
+    <div class="attestation-nom">
+        {{ tentative.apprenant.get_full_name|default:tentative.apprenant.username }}
+    </div>
+
+    <p class="attestation-texte">
+        Pour avoir validé avec succès l'évaluation des compétences sur le module :<br>
+        <strong style="font-size:1.3rem; color:#2c2543;">« {{ tentative.quiz.titre }} »</strong>
+    </p>
+
+    <div class="attestation-score">
+        Score obtenu : {{ tentative.score }}/{{ tentative.score_total }} ({{ tentative.pourcentage }}%) · Seuil validé
+    </div>
+
+    <div class="attestation-footer">
+        <div>
+            <small style="color:#777; display:block;">Délivré le :</small>
+            <strong>{{ tentative.date_fin|default:tentative.date_debut|date:"d F Y" }}</strong><br>
+            <small style="color:#999;">Identifiant de vérification : SFQ-{{ tentative.pk }}-{{ tentative.apprenant.pk }}</small>
+        </div>
+        <div class="attestation-signature">
+            <small style="color:#777; display:block;">Formateur référent :</small>
+            <strong>{{ tentative.quiz.formateur.get_full_name|default:tentative.quiz.formateur.username }}</strong>
+            <div class="signature-ligne"></div>
+            <small style="color:#888;">Signature & Sceau académique</small>
+        </div>
+    </div>
+</div>
+{% endblock %}

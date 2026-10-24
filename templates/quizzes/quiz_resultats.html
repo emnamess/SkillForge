@@ -1,0 +1,94 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Résultats · {{ quiz.titre }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/quizzes.css' %}">
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'quizzes:quiz_detail' quiz.pk %}" class="back-link">← {{ quiz.titre }}</a>
+
+<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+    <div>
+        <h1 class="page-title">Résultats</h1>
+        <p class="page-subtitle">{{ quiz.titre }}</p>
+    </div>
+    {% if tentatives %}
+    <a href="{% url 'quizzes:quiz_export_csv' quiz.pk %}" class="btn btn-outline" style="font-weight:600;">
+        📥 Exporter les notes (CSV)
+    </a>
+    {% endif %}
+</div>
+
+<div class="stats" style="margin-bottom:1.5rem;">
+    <div class="card stat">
+        <strong>{{ stats.nb_tentatives }}</strong>
+        <span>Tentative{{ stats.nb_tentatives|pluralize }}</span>
+    </div>
+    <div class="card stat">
+        <strong>{% if stats.moyenne %}{{ stats.moyenne|floatformat:1 }}%{% else %}—{% endif %}</strong>
+        <span>Moyenne</span>
+    </div>
+    <div class="card stat">
+        <strong>{{ stats.taux_reussite }}%</strong>
+        <span>Taux de réussite</span>
+    </div>
+    <div class="card stat">
+        <strong>{{ stats.nb_reussies }}</strong>
+        <span>Réussite{{ stats.nb_reussies|pluralize }}</span>
+    </div>
+</div>
+
+{% if tentatives %}
+<div class="card table-card">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Apprenant</th>
+                <th>Score</th>
+                <th>Pourcentage</th>
+                <th>Résultat</th>
+                <th>Date</th>
+                <th class="text-right">Détails</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tentative in tentatives %}
+            <tr>
+                <td>
+                    <div class="user-cell">
+                        <div class="avatar">{{ tentative.apprenant.initiales }}</div>
+                        <div>
+                            <span>{{ tentative.apprenant.get_full_name|default:tentative.apprenant.username }}</span>
+                            <small style="display:block; color:var(--muted);">{{ tentative.apprenant.email }}</small>
+                        </div>
+                    </div>
+                </td>
+                <td>{{ tentative.score }}/{{ tentative.score_total }}</td>
+                <td><strong>{{ tentative.pourcentage }}%</strong></td>
+                <td>
+                    {% if tentative.reussie %}
+                    <span class="badge badge-green">✅ Réussi</span>
+                    {% else %}
+                    <span class="badge badge-rust">❌ Non réussi</span>
+                    {% endif %}
+                </td>
+                <td class="muted">{{ tentative.date_debut|date:"d/m/Y H:i" }}</td>
+                <td class="text-right">
+                    <a href="{% url 'quizzes:tentative_detail' tentative.pk %}" class="btn btn-outline btn-sm">Voir</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card empty-state">
+    <p style="font-size:2.5rem; margin:0;">📊</p>
+    <p>Aucune tentative pour ce quiz.</p>
+    <p class="muted">Publiez le quiz pour que les apprenants puissent le passer.</p>
+</div>
+{% endif %}
+{% endblock %}
