@@ -1,4 +1,4 @@
-"""Fabriques d'objets pour les tests de l'Espace Carrière (et un générateur de PDF minimal)."""
+"""Fabriques d'objets pour les tests de l'Espace Carrière, et générateur de PDF minimal (tests et démo)."""
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 

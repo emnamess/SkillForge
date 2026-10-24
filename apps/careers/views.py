@@ -565,7 +565,7 @@ def admin_competences(request):
 
     q = request.GET.get("q", "").strip()
     qs = Competence.objects.annotate(nb_offres=Count("exigences", distinct=True),
-                                     nb_apprenants=Count("maitrises", distinct=True))
+                                     nb_apprenants=Count("maitrises", distinct=True)).order_by("categorie", "nom")
     if q:
         qs = qs.filter(Q(nom__icontains=q) | Q(alias__icontains=q))
     page, params = paginer(request, qs, 30)
