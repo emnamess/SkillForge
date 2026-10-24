@@ -93,6 +93,11 @@
 {% endfor %}
 
 <div style="text-align:center; margin-top:2rem; display:flex; justify-content:center; gap:0.75rem; flex-wrap:wrap;">
+    {% if tentative.reussie %}
+    <a href="{% url 'quizzes:attestation_reussite' tentative.pk %}" class="btn" style="background:#2c2543; color:white; font-weight:600;" target="_blank">
+        🎓 Voir mon attestation
+    </a>
+    {% endif %}
     {% if user.est_apprenant %}
     <a href="{% url 'quizzes:passer_quiz' tentative.quiz.pk %}" class="btn btn-outline">🔄 Repasser le quiz</a>
     <a href="{% url 'quizzes:mes_tentatives' %}" class="btn btn-primary">Mes résultats →</a>

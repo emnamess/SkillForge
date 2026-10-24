@@ -9,7 +9,7 @@ from .models import Choix, Question, Quiz
 class QuizForm(forms.ModelForm):
     class Meta:
         model = Quiz
-        fields = ["titre", "description", "seuil_reussite", "duree_minutes", "est_publie"]
+        fields = ["titre", "description", "seuil_reussite", "duree_minutes", "est_publie", "melanger_questions"]
         widgets = {
             "titre": forms.TextInput(attrs={"placeholder": "Ex : Les bases de SQL"}),
             "description": forms.Textarea(attrs={"rows": 3, "placeholder": "Description du quiz…"}),

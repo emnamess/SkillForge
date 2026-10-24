@@ -10,8 +10,17 @@
 {% block content %}
 <a href="{% url 'quizzes:quiz_detail' quiz.pk %}" class="back-link">← {{ quiz.titre }}</a>
 
-<h1 class="page-title">Résultats</h1>
-<p class="page-subtitle">{{ quiz.titre }}</p>
+<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+    <div>
+        <h1 class="page-title">Résultats</h1>
+        <p class="page-subtitle">{{ quiz.titre }}</p>
+    </div>
+    {% if tentatives %}
+    <a href="{% url 'quizzes:quiz_export_csv' quiz.pk %}" class="btn btn-outline" style="font-weight:600;">
+        📥 Exporter les notes (CSV)
+    </a>
+    {% endif %}
+</div>
 
 <div class="stats" style="margin-bottom:1.5rem;">
     <div class="card stat">

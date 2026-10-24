@@ -4,10 +4,13 @@ Formateur : créer, modifier, supprimer des quiz, gérer les questions, voir les
 Apprenant : parcourir les quiz publiés, passer un quiz, consulter ses tentatives.
 """
 
+import csv
+import random
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Avg, Count, Q
-from django.http import Http404
+from django.db.models import Avg, Count, F, Q
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -26,19 +29,32 @@ from .services import corriger_tentative
 @login_required
 def index(request):
     """Page principale : liste des quiz selon le rôle."""
-    if request.user.est_formateur or request.user.est_administrateur:
+    if request.user.est_administrateur:
+        quiz_list = Quiz.objects.annotate(
+            nb_questions=Count("questions", distinct=True),
+            nb_tentatives=Count("tentatives", filter=Q(tentatives__terminee=True), distinct=True),
+        )
+        template = "quizzes/index_formateur.html"
+    elif request.user.est_formateur:
         quiz_list = Quiz.objects.filter(formateur=request.user).annotate(
-            nb_questions=Count("questions"),
-            nb_tentatives=Count("tentatives", filter=Q(tentatives__terminee=True)),
+            nb_questions=Count("questions", distinct=True),
+            nb_tentatives=Count("tentatives", filter=Q(tentatives__terminee=True), distinct=True),
         )
         template = "quizzes/index_formateur.html"
     else:
         quiz_list = Quiz.objects.filter(est_publie=True).annotate(
-            nb_questions=Count("questions"),
+            nb_questions=Count("questions", distinct=True),
         )
         template = "quizzes/index_apprenant.html"
 
     return render(request, template, {"quiz_list": quiz_list})
+
+
+def _get_quiz_formateur_ou_admin(request, pk):
+    """Récupère un quiz si l'utilisateur est administrateur ou formateur propriétaire."""
+    if request.user.est_administrateur:
+        return get_object_or_404(Quiz, pk=pk)
+    return get_object_or_404(Quiz, pk=pk, formateur=request.user)
 
 
 # ──────────────────────────────────────────────
@@ -82,9 +98,9 @@ def quiz_detail(request, pk):
     return render(request, "quizzes/quiz_detail.html", context)
 
 
-@role_required(User.Role.FORMATEUR)
+@role_required(User.Role.FORMATEUR, User.Role.ADMINISTRATEUR)
 def quiz_modifier(request, pk):
-    quiz = get_object_or_404(Quiz, pk=pk, formateur=request.user)
+    quiz = _get_quiz_formateur_ou_admin(request, pk)
     if request.method == "POST":
         form = QuizForm(request.POST, instance=quiz)
         if form.is_valid():
@@ -96,9 +112,9 @@ def quiz_modifier(request, pk):
     return render(request, "quizzes/quiz_form.html", {"form": form, "quiz": quiz, "creation": False})
 
 
-@role_required(User.Role.FORMATEUR)
+@role_required(User.Role.FORMATEUR, User.Role.ADMINISTRATEUR)
 def quiz_supprimer(request, pk):
-    quiz = get_object_or_404(Quiz, pk=pk, formateur=request.user)
+    quiz = _get_quiz_formateur_ou_admin(request, pk)
     if request.method == "POST":
         titre = quiz.titre
         quiz.delete()
@@ -108,21 +124,21 @@ def quiz_supprimer(request, pk):
 
 
 # ──────────────────────────────────────────────
-# Formateur — Gestion des questions
+# Formateur / Admin — Gestion des questions
 # ──────────────────────────────────────────────
 
-@role_required(User.Role.FORMATEUR)
+@role_required(User.Role.FORMATEUR, User.Role.ADMINISTRATEUR)
 def questions_gerer(request, pk):
     """Page de gestion des questions d'un quiz (ajout, modification, suppression)."""
-    quiz = get_object_or_404(Quiz, pk=pk, formateur=request.user)
+    quiz = _get_quiz_formateur_ou_admin(request, pk)
     questions = quiz.questions.prefetch_related("choix").all()
     return render(request, "quizzes/questions_gerer.html", {"quiz": quiz, "questions": questions})
 
 
-@role_required(User.Role.FORMATEUR)
+@role_required(User.Role.FORMATEUR, User.Role.ADMINISTRATEUR)
 def question_ajouter(request, pk):
     """Ajouter une question à un quiz."""
-    quiz = get_object_or_404(Quiz, pk=pk, formateur=request.user)
+    quiz = _get_quiz_formateur_ou_admin(request, pk)
 
     if request.method == "POST":
         form = QuestionForm(request.POST)
@@ -135,13 +151,11 @@ def question_ajouter(request, pk):
                 question.ordre = quiz.questions.count() + 1
             question.save()
 
-            # Les choix ne sont pertinents que pour QCM et Vrai/Faux
             if question.type in (Question.Type.QCM, Question.Type.VRAI_FAUX):
                 formset = ChoixFormSet(request.POST, prefix="choix", instance=question)
                 if formset.is_valid():
                     formset.save()
                 else:
-                    # Si les choix sont invalides, supprimer la question créée
                     question.delete()
                     messages.error(request, "Erreur dans les choix de réponse.")
                     return render(request, "quizzes/question_form.html", {
@@ -159,10 +173,10 @@ def question_ajouter(request, pk):
     })
 
 
-@role_required(User.Role.FORMATEUR)
+@role_required(User.Role.FORMATEUR, User.Role.ADMINISTRATEUR)
 def question_modifier(request, pk, question_pk):
     """Modifier une question existante."""
-    quiz = get_object_or_404(Quiz, pk=pk, formateur=request.user)
+    quiz = _get_quiz_formateur_ou_admin(request, pk)
     question = get_object_or_404(Question, pk=question_pk, quiz=quiz)
 
     if request.method == "POST":
@@ -181,7 +195,6 @@ def question_modifier(request, pk, question_pk):
                         "question": question, "creation": False,
                     })
             else:
-                # Supprimer les choix si on change le type vers texte libre
                 question.choix.all().delete()
 
             messages.success(request, "Question mise à jour.")
@@ -196,10 +209,10 @@ def question_modifier(request, pk, question_pk):
     })
 
 
-@role_required(User.Role.FORMATEUR)
+@role_required(User.Role.FORMATEUR, User.Role.ADMINISTRATEUR)
 def question_supprimer(request, pk, question_pk):
     """Supprimer une question."""
-    quiz = get_object_or_404(Quiz, pk=pk, formateur=request.user)
+    quiz = _get_quiz_formateur_ou_admin(request, pk)
     question = get_object_or_404(Question, pk=question_pk, quiz=quiz)
 
     if request.method == "POST":
@@ -213,13 +226,13 @@ def question_supprimer(request, pk, question_pk):
 
 
 # ──────────────────────────────────────────────
-# Formateur — Résultats
+# Formateur / Admin — Résultats
 # ──────────────────────────────────────────────
 
-@role_required(User.Role.FORMATEUR)
+@role_required(User.Role.FORMATEUR, User.Role.ADMINISTRATEUR)
 def quiz_resultats(request, pk):
     """Résultats d'un quiz : liste des tentatives, statistiques."""
-    quiz = get_object_or_404(Quiz, pk=pk, formateur=request.user)
+    quiz = _get_quiz_formateur_ou_admin(request, pk)
     tentatives = Tentative.objects.filter(quiz=quiz, terminee=True).select_related("apprenant")
 
     stats = tentatives.aggregate(
@@ -241,17 +254,22 @@ def quiz_resultats(request, pk):
 
 
 # ──────────────────────────────────────────────
-# Apprenant — Passer un quiz
+# Passer un quiz (Apprenant, ou Formateur/Admin en test)
 # ──────────────────────────────────────────────
 
-@role_required(User.Role.APPRENANT)
+@login_required
 def passer_quiz(request, pk):
-    """Page où l'apprenant répond aux questions du quiz."""
-    quiz = get_object_or_404(Quiz, pk=pk, est_publie=True)
+    """Page où l'apprenant (ou l'administrateur/formateur) répond aux questions du quiz."""
+    # Les administrateurs et formateurs peuvent tester leur propre quiz même non publié
+    if request.user.est_administrateur or (request.user.est_formateur and Quiz.objects.filter(pk=pk, formateur=request.user).exists()):
+        quiz = get_object_or_404(Quiz, pk=pk)
+    else:
+        quiz = get_object_or_404(Quiz, pk=pk, est_publie=True)
+
     questions = quiz.questions.prefetch_related("choix").all()
 
     if not questions.exists():
-        messages.warning(request, "Ce quiz ne contient aucune question.")
+        messages.warning(request, "Ce quiz ne contient aucune question pour le moment.")
         return redirect("quizzes:quiz_detail", pk=quiz.pk)
 
     if request.method == "POST":
@@ -280,7 +298,11 @@ def passer_quiz(request, pk):
         messages.success(request, "Quiz terminé ! Voici vos résultats.")
         return redirect("quizzes:tentative_detail", pk=tentative.pk)
 
-    return render(request, "quizzes/passer_quiz.html", {"quiz": quiz, "questions": questions})
+    questions_affichage = list(questions)
+    if quiz.melanger_questions:
+        random.shuffle(questions_affichage)
+
+    return render(request, "quizzes/passer_quiz.html", {"quiz": quiz, "questions": questions_affichage})
 
 
 # ──────────────────────────────────────────────
@@ -323,10 +345,10 @@ def mes_tentatives(request):
     return render(request, "quizzes/mes_tentatives.html", {"tentatives": tentatives})
 
 
-@role_required(User.Role.FORMATEUR)
+@role_required(User.Role.FORMATEUR, User.Role.ADMINISTRATEUR)
 def quiz_generer_ia(request, pk):
     """Génération assistée par IA de nouvelles questions pour un quiz."""
-    quiz = get_object_or_404(Quiz, pk=pk, formateur=request.user)
+    quiz = _get_quiz_formateur_ou_admin(request, pk)
     if request.method == "POST":
         theme = request.POST.get("theme", "").strip() or quiz.titre
         niveau = request.POST.get("niveau", "Intermédiaire")
@@ -360,3 +382,140 @@ def tentative_recorriger(request, pk):
     recorriger_tentative(tentative)
     messages.success(request, "✨ Les réponses libres ont été recorrigées par l'IA !")
     return redirect("quizzes:tentative_detail", pk=tentative.pk)
+
+
+# ──────────────────────────────────────────────
+# Formateur — Export CSV
+# ──────────────────────────────────────────────
+
+@role_required(User.Role.FORMATEUR)
+def quiz_export_csv(request, pk):
+    """Exporte les résultats d'un quiz au format CSV compatible Excel."""
+    quiz = get_object_or_404(Quiz, pk=pk, formateur=request.user)
+    tentatives = Tentative.objects.filter(quiz=quiz, terminee=True).select_related("apprenant").order_by("-date_debut")
+
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="resultats_quiz_{quiz.pk}_{timezone.now():%Y%m%d}.csv"'
+
+    response.write("\ufeff")  # BOM UTF-8 pour Excel
+    writer = csv.writer(response, delimiter=";")
+    writer.writerow(["Nom", "Prénom", "Nom d'utilisateur", "Email", "Date", "Score", "Total", "Pourcentage", "Statut"])
+
+    for t in tentatives:
+        writer.writerow([
+            t.apprenant.last_name or "—",
+            t.apprenant.first_name or "—",
+            t.apprenant.username,
+            t.apprenant.email,
+            t.date_debut.strftime("%d/%m/%Y %H:%M"),
+            f"{t.score}",
+            f"{t.score_total}",
+            f"{t.pourcentage}%",
+            "Réussi" if t.reussie else "Non réussi",
+        ])
+
+    return response
+
+
+# ──────────────────────────────────────────────
+# Admin — Supervision globale des Quiz
+# ──────────────────────────────────────────────
+
+@role_required(User.Role.ADMINISTRATEUR)
+def supervision_admin(request):
+    """Tableau de bord de supervision globale des Quiz pour l'administrateur."""
+    quizzes = Quiz.objects.select_related("formateur").annotate(
+        nb_q=Count("questions", distinct=True),
+        nb_t=Count("tentatives", filter=Q(tentatives__terminee=True), distinct=True),
+        moyenne=Avg("tentatives__pourcentage", filter=Q(tentatives__terminee=True)),
+    ).order_by("-date_creation")
+
+    stats = {
+        "nb_quiz": Quiz.objects.count(),
+        "nb_publies": Quiz.objects.filter(est_publie=True).count(),
+        "nb_questions": Question.objects.count(),
+        "nb_qcm": Question.objects.filter(type=Question.Type.QCM).count(),
+        "nb_texte_libre": Question.objects.filter(type=Question.Type.TEXTE_LIBRE).count(),
+        "nb_tentatives": Tentative.objects.filter(terminee=True).count(),
+        "nb_corrections_ia": Reponse.objects.filter(question__type=Question.Type.TEXTE_LIBRE, corrigee=True).count(),
+        "taux_reussite_global": Tentative.objects.filter(terminee=True).aggregate(t=Avg("pourcentage"))["t"] or 0,
+    }
+
+    top_quiz = quizzes.order_by("-nb_t")[:5]
+    dernieres_tentatives = Tentative.objects.filter(terminee=True).select_related(
+        "quiz", "apprenant"
+    ).order_by("-date_debut")[:10]
+
+    return render(request, "quizzes/supervision_admin.html", {
+        "quizzes": quizzes,
+        "stats": stats,
+        "top_quiz": top_quiz,
+        "dernieres_tentatives": dernieres_tentatives,
+    })
+
+
+@role_required(User.Role.ADMINISTRATEUR, User.Role.FORMATEUR)
+def quiz_toggle_publication(request, pk):
+    """Bascule rapide entre Publié et Brouillon (modération en 1 clic)."""
+    if request.user.est_administrateur:
+        quiz = get_object_or_404(Quiz, pk=pk)
+    else:
+        quiz = get_object_or_404(Quiz, pk=pk, formateur=request.user)
+
+    quiz.est_publie = not quiz.est_publie
+    quiz.save(update_fields=["est_publie"])
+    etat = "publié ✅" if quiz.est_publie else "dépublié (brouillon) ⏸️"
+    messages.success(request, f"Le quiz « {quiz.titre} » est désormais {etat}.")
+
+    next_url = request.META.get("HTTP_REFERER")
+    if next_url:
+        return redirect(next_url)
+    return redirect("quizzes:index")
+
+
+# ──────────────────────────────────────────────
+# Apprenant — Révision des erreurs & Attestation
+# ──────────────────────────────────────────────
+
+@role_required(User.Role.APPRENANT)
+def mes_erreurs(request):
+    """Espace d'entraînement ciblé : récapitulatif des erreurs pour progresser."""
+    reponses_ratees = (
+        Reponse.objects.filter(
+            tentative__apprenant=request.user,
+            tentative__terminee=True,
+            corrigee=True,
+        )
+        .filter(Q(est_correcte=False) | Q(points_obtenus__lt=F("question__points")))
+        .select_related("question", "question__quiz", "choix_selectionne")
+        .prefetch_related("question__choix")
+        .order_by("-tentative__date_debut")
+    )
+
+    return render(request, "quizzes/mes_erreurs.html", {
+        "reponses_ratees": reponses_ratees,
+    })
+
+
+@login_required
+def attestation_reussite(request, pk):
+    """Attestation de réussite imprimable pour toute tentative validée."""
+    tentative = get_object_or_404(
+        Tentative.objects.select_related("quiz", "quiz__formateur", "apprenant"),
+        pk=pk,
+        terminee=True,
+    )
+    if not tentative.reussie:
+        messages.warning(request, "L'attestation n'est accessible que pour un quiz réussi.")
+        return redirect("quizzes:tentative_detail", pk=tentative.pk)
+
+    if (
+        tentative.apprenant != request.user
+        and not request.user.est_administrateur
+        and tentative.quiz.formateur != request.user
+    ):
+        raise Http404
+
+    return render(request, "quizzes/attestation.html", {
+        "tentative": tentative,
+    })

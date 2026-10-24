@@ -26,6 +26,11 @@ class Quiz(models.Model):
         help_text="Pourcentage minimum pour réussir le quiz.",
     )
     est_publie = models.BooleanField("publié", default=False)
+    melanger_questions = models.BooleanField(
+        "ordre aléatoire des questions",
+        default=False,
+        help_text="Affiche les questions dans un ordre aléatoire à chaque tentative pour limiter la triche.",
+    )
     duree_minutes = models.PositiveIntegerField(
         "durée (minutes)",
         null=True,

@@ -197,3 +197,40 @@ class QuizVuesTests(TestCase):
         tentative = Tentative.objects.filter(apprenant=self.apprenant, quiz=self.quiz).first()
         self.assertIsNotNone(tentative)
         self.assertTrue(tentative.terminee)
+
+    def test_export_csv_formateur(self):
+        self.client.login(username="formateur4", password="testpass123")
+        r = self.client.get(reverse("quizzes:quiz_export_csv", args=[self.quiz.pk]))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r["Content-Type"], "text/csv; charset=utf-8")
+
+    def test_supervision_admin_securite(self):
+        admin = creer_utilisateur(User.Role.ADMINISTRATEUR, "admin_test")
+        self.client.login(username="admin_test", password="testpass123")
+        r = self.client.get(reverse("quizzes:supervision_admin"))
+        self.assertEqual(r.status_code, 200)
+
+        # Interdit aux formateurs et apprenants
+        self.client.login(username="formateur4", password="testpass123")
+        r_f = self.client.get(reverse("quizzes:supervision_admin"))
+        self.assertEqual(r_f.status_code, 403)
+
+    def test_mes_erreurs_apprenant(self):
+        self.client.login(username="apprenant2", password="testpass123")
+        r = self.client.get(reverse("quizzes:mes_erreurs"))
+        self.assertEqual(r.status_code, 200)
+
+    def test_attestation_reussite(self):
+        tentative = Tentative.objects.create(
+            quiz=self.quiz,
+            apprenant=self.apprenant,
+            score=Decimal("6"),
+            score_total=Decimal("6"),
+            pourcentage=Decimal("100"),
+            reussie=True,
+            terminee=True,
+        )
+        self.client.login(username="apprenant2", password="testpass123")
+        r = self.client.get(reverse("quizzes:attestation_reussite", args=[tentative.pk]))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Attestation de Réussite")

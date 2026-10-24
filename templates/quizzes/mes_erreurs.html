@@ -1,0 +1,131 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Réviser mes erreurs · SkillForge{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/quizzes.css' %}">
+<style>
+    .erreur-card {
+        border-left: 4px solid var(--rust);
+        margin-bottom: 1.25rem;
+    }
+    .erreur-quiz-tag {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--indigo);
+        background: var(--indigo-soft);
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        display: inline-block;
+        margin-bottom: 0.5rem;
+    }
+    .bonne-reponse-box {
+        background: var(--green-soft);
+        border: 1px solid rgba(46, 125, 50, 0.2);
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        margin-top: 0.75rem;
+        font-size: 0.9rem;
+        color: #1b5e20;
+    }
+    .votre-reponse-box {
+        background: var(--rust-soft);
+        border: 1px solid rgba(198, 40, 40, 0.2);
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+        color: #b71c1c;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'quizzes:index' %}" class="back-link">← Retour aux quiz</a>
+
+<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+    <div>
+        <h1 class="page-title">🎯 Réviser mes points faibles</h1>
+        <p class="page-subtitle">Révisez les questions sur lesquelles vous avez trébuché pour consolider vos compétences</p>
+    </div>
+    <div style="display:flex; gap:0.5rem;">
+        <a href="{% url 'quizzes:mes_tentatives' %}" class="btn btn-outline">📊 Historique des quiz</a>
+    </div>
+</div>
+
+{% if reponses_ratees %}
+<div class="stats" style="margin-bottom:1.5rem;">
+    <div class="card stat">
+        <strong style="color:var(--rust);">{{ reponses_ratees|length }}</strong>
+        <span>Question{{ reponses_ratees|length|pluralize }} à retravailler</span>
+    </div>
+</div>
+
+<div class="question-list">
+    {% for reponse in reponses_ratees %}
+    <div class="card erreur-card">
+        <div>
+            <span class="erreur-quiz-tag">Quiz : {{ reponse.question.quiz.titre }}</span>
+            <div style="font-weight:600; font-size:1.05rem; margin-bottom:0.75rem; color:var(--navy);">
+                {{ forloop.counter }}. {{ reponse.question.enonce }}
+            </div>
+        </div>
+
+        {% if reponse.question.type == 'qcm' or reponse.question.type == 'vrai_faux' %}
+            <div class="votre-reponse-box">
+                <strong>Votre réponse :</strong>
+                {% if reponse.choix_selectionne %}
+                    {{ reponse.choix_selectionne.texte }} ✗
+                {% else %}
+                    <em>(Aucune réponse sélectionnée)</em>
+                {% endif %}
+            </div>
+
+            <div class="bonne-reponse-box">
+                <strong>Bonne réponse attendue :</strong>
+                {% for choix in reponse.question.choix.all %}
+                    {% if choix.est_correct %}
+                        <span>{{ choix.texte }} ✓</span>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% elif reponse.question.type == 'texte_libre' %}
+            <div class="votre-reponse-box">
+                <strong>Ce que vous aviez rédigé :</strong><br>
+                {{ reponse.texte_libre|default:"(Vide)" }}
+            </div>
+
+            {% if reponse.feedback_ia %}
+            <div class="feedback-ia" style="margin-top:0.75rem;">
+                <strong>🤖 Retour de l'IA lors de votre passage :</strong>
+                {{ reponse.feedback_ia }}
+            </div>
+            {% endif %}
+        {% endif %}
+
+        {% if reponse.question.explication %}
+        <div class="explication" style="margin-top:0.75rem;">
+            <strong>💡 Explication du formateur :</strong>
+            {{ reponse.question.explication }}
+        </div>
+        {% endif %}
+
+        <div style="margin-top:1rem; display:flex; justify-content:flex-end;">
+            <a href="{% url 'quizzes:passer_quiz' reponse.question.quiz.pk %}" class="btn btn-outline btn-sm">
+                🔄 Retenter ce quiz
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% else %}
+<div class="card empty-state">
+    <p style="font-size:3rem; margin:0;">🎉</p>
+    <h2 style="margin:0.5rem 0 0.25rem;">Aucune erreur enregistrée !</h2>
+    <p class="muted">Vous avez réussi toutes les questions de vos quiz passés avec brio, ou vous n'avez pas encore passé de quiz.</p>
+    <a href="{% url 'quizzes:index' %}" class="btn btn-primary" style="margin-top:1rem;">Découvrir les quiz disponibles</a>
+</div>
+{% endif %}
+{% endblock %}

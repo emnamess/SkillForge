@@ -13,7 +13,14 @@
         <h1 class="page-title">Mes quiz</h1>
         <p class="page-subtitle">Gérez vos quiz et consultez les résultats</p>
     </div>
-    <a href="{% url 'quizzes:quiz_creer' %}" class="btn btn-primary">＋ Créer un quiz</a>
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        {% if user.est_administrateur %}
+        <a href="{% url 'quizzes:supervision_admin' %}" class="btn btn-outline" style="border-color:var(--navy); color:var(--navy); font-weight:600;">
+            🛡️ Supervision globale
+        </a>
+        {% endif %}
+        <a href="{% url 'quizzes:quiz_creer' %}" class="btn btn-primary">＋ Créer un quiz</a>
+    </div>
 </div>
 
 {% if quiz_list %}

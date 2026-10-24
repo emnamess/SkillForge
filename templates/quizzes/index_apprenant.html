@@ -11,8 +11,11 @@
 <h1 class="page-title">Quiz disponibles</h1>
 <p class="page-subtitle">Testez vos connaissances et obtenez un feedback personnalisé par l'IA</p>
 
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.75rem;">
+<div style="display:flex; justify-content:flex-start; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.75rem;">
     <a href="{% url 'quizzes:mes_tentatives' %}" class="btn btn-outline">📊 Mes résultats</a>
+    <a href="{% url 'quizzes:mes_erreurs' %}" class="btn btn-outline" style="border-color:var(--rust); color:var(--rust); font-weight:600;">
+        🎯 Réviser mes erreurs
+    </a>
 </div>
 
 {% if quiz_list %}
