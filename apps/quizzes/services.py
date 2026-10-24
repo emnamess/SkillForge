@@ -147,31 +147,36 @@ def _corriger_par_gemini(question, reponse_texte, points_max):
 
 
 def _corriger_sans_ia(question, reponse_texte, points_max):
-    """Correction de secours quand Gemini n'est pas configuré ou indisponible."""
+    """Correction pédagogique de secours quand Gemini n'est pas disponible."""
     texte = reponse_texte.strip().lower()
     if not texte:
         return CorrectionIA(0, "Aucune réponse fournie.", "regles")
 
-    # Vérification par mots-clés de base si consigne_ia est présente
     consigne = (question.consigne_ia or "").lower()
-    enonce = (question.enonce or "").lower()
+    explication = (question.explication or "").strip()
+    points_max_float = float(points_max)
 
-    # Détecter si les mots clés de la réponse se retrouvent dans la consigne ou la question
-    mots_cles = [m for m in re.findall(r"\b\w{3,}\b", consigne) if m not in {"les", "des", "une", "pour", "dans", "avec", "doit", "doivent"}]
+    # Détecter si des mots clés attendus se retrouvent dans la réponse
+    mots_cles = [
+        m for m in re.findall(r"\b\w{3,}\b", consigne)
+        if m not in {"les", "des", "une", "pour", "dans", "avec", "doit", "doivent", "cette", "apprenant", "mentionner"}
+    ]
     correspondances = [m for m in mots_cles if m in texte] if mots_cles else []
 
-    if correspondances or (texte in consigne or consigne in texte and len(texte) > 2):
-        points = float(points_max)
-        feedback = (
-            f"✅ Bonne réponse ! Mots-clés attendus identifiés ({', '.join(correspondances) or texte}). "
-            "Note : activez GEMINI_API_KEY dans votre fichier .env pour bénéficier de retours pédagogiques plus détaillés."
-        )
+    est_valide = bool(correspondances) or (consigne and (texte in consigne or consigne in texte and len(texte) > 2))
+
+    if est_valide:
+        points = points_max_float
+        termes = f" (notion clé : {', '.join(correspondances)})" if correspondances else ""
+        feedback = f"✅ Bonne réponse ! Les notions attendues ont été correctement abordées{termes}."
     else:
-        points = round(float(points_max) * 0.5, 2) if len(texte) > 10 else 0
-        feedback = (
-            "⏳ Réponse enregistrée. Pour une évaluation IA détaillée avec feedback personnalisé, "
-            "ajoutez votre clé gratuite GEMINI_API_KEY dans le fichier .env (depuis aistudio.google.com/apikey)."
-        )
+        if len(texte) >= 15:
+            points = round(points_max_float * 0.5, 2)
+            feedback = f"~ Réponse partielle. Éléments attendus : {question.consigne_ia or explication}."
+        else:
+            points = 0
+            attendu = question.consigne_ia or explication or "la commande SELECT et la clause FROM"
+            feedback = f"❌ Réponse incorrecte ou incomplète. Éléments attendus : {attendu}."
 
     return CorrectionIA(points, feedback, "regles")
 

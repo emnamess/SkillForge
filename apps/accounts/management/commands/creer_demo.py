@@ -148,6 +148,52 @@ class Command(BaseCommand):
             consigne_ia="L'apprenant doit mentionner le mot-clé SELECT et idéalement FROM pour spécifier la table source.",
         )
 
+        # Créer une tentative de démonstration réussie pour Yasmine
+        yasmine = comptes.get("yasmine")
+        if yasmine:
+            from apps.quizzes.models import Reponse, Tentative
+            if not Tentative.objects.filter(quiz=quiz, apprenant=yasmine).exists():
+                tentative = Tentative.objects.create(
+                    quiz=quiz,
+                    apprenant=yasmine,
+                    terminee=True,
+                    date_debut=timezone.now() - timedelta(hours=2),
+                    date_fin=timezone.now() - timedelta(hours=1, minutes=50),
+                )
+                Reponse.objects.create(
+                    tentative=tentative,
+                    question=q1,
+                    choix_selectionne=q1.choix.filter(est_correct=True).first(),
+                    est_correcte=True,
+                    points_obtenus=1,
+                    corrigee=True,
+                )
+                Reponse.objects.create(
+                    tentative=tentative,
+                    question=q2,
+                    choix_selectionne=q2.choix.filter(est_correct=True).first(),
+                    est_correcte=True,
+                    points_obtenus=1,
+                    corrigee=True,
+                )
+                Reponse.objects.create(
+                    tentative=tentative,
+                    question=q3,
+                    texte_libre="On utilise la commande SELECT pour extraire les colonnes souhaitées, en ciblant la table source avec la clause FROM.",
+                    est_correcte=True,
+                    points_obtenus=2,
+                    feedback_ia="Excellente réponse ! L'utilisation conjointe de SELECT et FROM a été parfaitement ciblée et expliquée.",
+                    corrigee=True,
+                )
+                tentative.calculer_score()
+                services.notifier(
+                    yasmine,
+                    f"Quiz corrigé · {quiz.titre}",
+                    f"Vous avez obtenu {tentative.score}/{tentative.score_total} ({tentative.pourcentage}%) — réussi ✅.",
+                    type=Notification.Type.QUIZ,
+                    lien=tentative.get_absolute_url(),
+                )
+
     def creer_conversations(self, comptes):
         autorise = ResultatModeration(AUTORISE)
         maintenant = timezone.now()
@@ -199,4 +245,6 @@ class Command(BaseCommand):
             self.stdout.write("\nÀ essayer :"
                               "\n  - yasmine et karim dans deux navigateurs : messagerie en temps réel"
                               "\n  - admin : page Modération (1 message signalé) et validation de sami"
+                              "\n  - yasmine : voir « Mes résultats » du quiz SQL et tester un nouveau quiz (avec timer et progression)"
+                              "\n  - leila : voir « Résultats » du quiz SQL, modifier les questions et tester « ✨ Générer par IA »"
                               "\n  - yasmine : un rappel de séance arrive dans 2 minutes (avec python run.py dev)")
