@@ -134,6 +134,14 @@ def test(args):
     manage("test", *args)
 
 
+def couverture(args):
+    """Tests + rapport de couverture (ex. : python run.py couverture apps.certificates)."""
+    executer(python_venv(), "-m", "coverage", "run", "manage.py", "test", *args)
+    executer(python_venv(), "-m", "coverage", "report")
+    executer(python_venv(), "-m", "coverage", "html")
+    info(f"Rapport détaillé : {RACINE / 'htmlcov' / 'index.html'}")
+
+
 def check(args):
     """Vérifie le projet : configuration et migrations manquantes."""
     manage("check")
@@ -220,6 +228,7 @@ COMMANDES = {
     "serveur": serveur,
     "rappels": rappels,
     "test": test,
+    "couverture": couverture,
     "check": check,
     "migrate": migrate,
     "makemigrations": makemigrations,

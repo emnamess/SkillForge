@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Vérifier un certificat{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/certificates.css' %}">{% endblock %}
+
+{% block content %}
+<section class="verif">
+    <h1 class="page-title">Vérifier un certificat</h1>
+    <p class="page-subtitle">Saisissez le code imprimé en bas du certificat SkillForge.</p>
+
+    <form method="get" action="{% url 'certificates:verifier' %}" class="card verif-form" role="search">
+        <label for="{{ form.code.id_for_label }}" class="sr-only">{{ form.code.label }}</label>
+        {{ form.code }}
+        <button type="submit" class="btn btn-primary">Vérifier</button>
+    </form>
+    {% for error in form.code.errors %}<p class="alert alert-error">{{ error }}</p>{% endfor %}
+
+    {% if recherche %}
+        {% if certificat and certificat.est_valide %}
+            <div class="card verif-resultat verif-ok" role="status">
+                <span class="verif-icone" aria-hidden="true">✓</span>
+                <div>
+                    <h2>Certificat authentique</h2>
+                    <p class="muted">Ce certificat a bien été délivré par SkillForge et il est valide.</p>
+                    <dl>
+                        <dt>Titulaire</dt><dd>{{ certificat.apprenant.get_full_name|default:certificat.apprenant.username }}</dd>
+                        <dt>Cours</dt><dd>{{ certificat.titre_cours }}</dd>
+                        <dt>Délivré le</dt><dd>{{ certificat.date_delivrance|date:"j F Y" }}</dd>
+                        {% if certificat.score is not None %}<dt>Score</dt><dd>{{ certificat.score }} % · {{ certificat.mention }}</dd>{% endif %}
+                        {% if certificat.nom_formateur %}<dt>Formateur</dt><dd>{{ certificat.nom_formateur }}</dd>{% endif %}
+                        <dt>Code</dt><dd><code>{{ certificat.code_verification }}</code></dd>
+                    </dl>
+                </div>
+            </div>
+        {% elif certificat %}
+            <div class="card verif-resultat verif-ko">
+                <span class="verif-icone" aria-hidden="true">!</span>
+                <div>
+                    <h2>Certificat révoqué</h2>
+                    <p class="muted">Ce certificat « {{ certificat.titre_cours }} » a été délivré puis révoqué le
+                        {{ certificat.date_revocation|date:"j F Y" }}. Il n'est plus valide.</p>
+                </div>
+            </div>
+        {% else %}
+            <div class="card verif-resultat verif-ko">
+                <span class="verif-icone" aria-hidden="true">✕</span>
+                <div>
+                    <h2>Code inconnu</h2>
+                    <p class="muted">Aucun certificat ne correspond au code <code>{{ code }}</code>. Vérifiez la saisie
+                        (format SF-XXXX-XXXX).</p>
+                </div>
+            </div>
+        {% endif %}
+    {% endif %}
+</section>
+{% endblock %}
