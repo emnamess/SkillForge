@@ -2,6 +2,7 @@ import csv
 import logging
 import time
 
+import segno
 from django.contrib import messages
 from django.core.cache import cache
 from django.http import JsonResponse
@@ -71,15 +72,24 @@ def index(request):
     })
 
 
+def qr_code_svg(url):
+    """QR code (SVG en ligne) qui ouvre la page publique de vérification du certificat."""
+    qr = segno.make(url, error="m")  # niveau M : reste lisible même légèrement abîmé ou mal imprimé
+    return qr.svg_inline(scale=3, border=2, dark="#231f5c", light="#ffffff", omitsize=True,
+                         svgclass="certificat-qr-image", title="QR code de vérification du certificat")
+
+
 @login_required
 def detail(request, code):
     certificat = get_object_or_404(Certificat.objects.select_related("apprenant", "formateur"),
                                    code_verification=code)
     if not certificat.peut_etre_consulte_par(request.user):
         raise PermissionDenied
+    url_verification = request.build_absolute_uri(certificat.get_verification_url())
     return render(request, "certificates/detail.html", {
         "certificat": certificat,
-        "url_verification": request.build_absolute_uri(certificat.get_verification_url()),
+        "url_verification": url_verification,
+        "qr_code": qr_code_svg(url_verification),
         "form_revocation": RevocationForm() if request.user.est_administrateur else None,
         "peut_modifier": certificat.est_valide and certificat.peut_etre_modifie_par(request.user),
     })
@@ -176,10 +186,11 @@ def verifier_code(request, code):
 @role_required(User.Role.FORMATEUR)
 def statistiques(request):
     user = request.user
+    periode = stats.periode_depuis(request.GET.get("periode"))
     if user.est_administrateur:
-        contexte = stats.statistiques_plateforme()
+        contexte = stats.statistiques_plateforme(periode)
     else:
-        contexte = stats.statistiques_formateur(user)
+        contexte = stats.statistiques_formateur(user, periode)
     contexte["progression"] = stats.resume_progression(user)
     return render(request, "certificates/statistiques.html", contexte)
 

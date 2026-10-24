@@ -157,7 +157,12 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
-.certificat-code { margin: 2rem 0 0; color: var(--muted); font-size: 0.8rem; }
+.certificat-verification { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 2rem; }
+.certificat-qr { flex: 0 0 auto; width: 96px; line-height: 0; }
+.certificat-qr svg { display: block; width: 100%; height: auto; }
+.certificat-code { margin: 0; color: var(--muted); font-size: 0.8rem; text-align: left; line-height: 1.6; }
+.certificat-code strong { display: block; color: var(--navy); font-size: 0.85rem; }
+.certificat-url { word-break: break-all; }
 .certificat-code code { font-size: 0.85rem; color: var(--navy); font-weight: 600; }
 .certificat-revoque {
     position: absolute;
@@ -281,6 +286,24 @@
     .certificat-sceau { margin: 0 auto; }
     .verif-form { flex-direction: column; }
 }
+
+/* Sélecteur de période et graphiques à nombreux points (30 jours) */
+.periodes { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin: 0 0 1.5rem; }
+.periodes-libelle { color: var(--muted); font-size: 0.9rem; margin-right: 0.25rem; }
+.periode {
+    padding: 0.4rem 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--white);
+    color: var(--navy);
+    font-size: 0.88rem;
+    font-weight: 500;
+}
+.periode:hover { border-color: var(--indigo); }
+.periode.active { background: var(--indigo); border-color: var(--indigo); color: var(--white); }
+.barres.barres-denses, .barres-axe.barres-denses { gap: 3px; }
+.barres-denses .barre-remplie { width: 80%; border-radius: 2px 2px 0 0; }
+.barres-axe.barres-denses span { overflow: visible; white-space: nowrap; font-size: 0.72rem; }
 
 /* ---------- Recommandations (IA) ---------- */
 

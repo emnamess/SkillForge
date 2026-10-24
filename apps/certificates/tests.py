@@ -508,8 +508,11 @@ class RecommandationIntegrationTests(Base):
     def test_api_erreur_moteur_message_clair(self):
         from unittest import mock
         self.client.force_login(self.yasmine)
-        with mock.patch.object(recommandation, "recommandations_pour", side_effect=RuntimeError("panne")):
+        # assertLogs capture le journal d'erreur attendu (et vérifie qu'il est bien écrit) au lieu de l'afficher
+        with mock.patch.object(recommandation, "recommandations_pour", side_effect=RuntimeError("panne")), \
+                self.assertLogs("apps.certificates.views", level="ERROR") as journal:
             r = self.client.get(reverse("certificates:recommandations"))
+        self.assertIn("Échec du moteur de recommandation", journal.output[0])
         self.assertEqual(r.status_code, 503)
         self.assertIn("indisponibles", r.json()["erreur"])
 
@@ -564,3 +567,76 @@ class RecommandationSansDonneesTests(Base):
     def test_api_sans_aucun_certificat(self):
         self.client.force_login(self.yasmine)
         self.assertEqual(self.client.get(reverse("certificates:recommandations")).json()["recommandations"], [])
+
+
+# ---------- QR code, filtre de période, lien Statistiques du menu ----------
+
+class QrCodeTests(Base):
+    def test_qr_code_sur_le_certificat(self):
+        c = self.certificat()
+        self.client.force_login(self.yasmine)
+        r = self.client.get(c.get_absolute_url())
+        self.assertContains(r, 'class="certificat-qr-image"')
+        self.assertContains(r, "QR code de vérification du certificat")
+        self.assertContains(r, "Scannez pour vérifier")
+
+    def test_qr_code_encode_la_page_de_verification(self):
+        import segno
+        from .views import qr_code_svg
+        url = "http://testserver/certificats/verifier/SF-ABCD-EFGH/"
+        svg = qr_code_svg(url)
+        self.assertTrue(svg.startswith("<svg"))
+        # Même contenu encodé que le QR code de référence pour cette URL
+        self.assertIn(segno.make(url, error="m").svg_inline(scale=3, border=2, dark="#231f5c", light="#ffffff",
+                                                            omitsize=True).split('d="')[1][:200], svg)
+
+
+class FiltrePeriodeTests(Base):
+    def setUp(self):
+        super().setUp()
+        from datetime import timedelta
+        from django.utils import timezone
+        self.recent = self.certificat(cours="Récent", score=90)
+        self.ancien = self.certificat(cours="Ancien", score=60)
+        Certificat.objects.filter(pk=self.ancien.pk).update(date_delivrance=timezone.now() - timedelta(days=60))
+        self.url = reverse("certificates:statistiques")
+
+    def test_periode_change_les_chiffres(self):
+        trente = stats.statistiques_plateforme(stats.periode_depuis("30j"))
+        six = stats.statistiques_plateforme(stats.periode_depuis("6m"))
+        self.assertEqual(trente["certificats"]["periode_delivres"], 1)
+        self.assertEqual(trente["certificats"]["periode_score"], 90)
+        self.assertEqual(six["certificats"]["periode_delivres"], 2)
+        self.assertEqual(six["certificats"]["periode_score"], 75)
+        # Le total des certificats valides ne dépend pas de la période
+        self.assertEqual(trente["certificats"]["total"], six["certificats"]["total"])
+        self.assertEqual([l["nom"] for l in trente["top_cours"]], ["Récent"])
+
+    def test_series_selon_la_periode(self):
+        self.assertEqual(len(stats.statistiques_plateforme(stats.periode_depuis("30j"))["serie_certificats"]), 30)
+        self.assertEqual(len(stats.statistiques_plateforme(stats.periode_depuis("6m"))["serie_certificats"]), 6)
+        self.assertEqual(len(stats.statistiques_plateforme(stats.periode_depuis("12m"))["serie_certificats"]), 12)
+        serie = stats.statistiques_plateforme(stats.periode_depuis("30j"))["serie_certificats"]
+        self.assertEqual(serie[-1]["valeur"], 1)  # le certificat récent, aujourd'hui
+        self.assertEqual(sum(p["valeur"] for p in serie), 1)
+
+    def test_page_et_periode_inconnue(self):
+        self.client.force_login(self.admin)
+        r = self.client.get(self.url, {"periode": "30j"})
+        self.assertContains(r, 'aria-current="page">30 derniers jours')
+        r = self.client.get(self.url, {"periode": "n_importe_quoi"})
+        self.assertEqual(r.context["periode"].code, stats.PERIODE_PAR_DEFAUT)
+
+    def test_formateur_filtre_aussi(self):
+        self.client.force_login(self.karim)
+        r = self.client.get(self.url, {"periode": "30j"})
+        self.assertEqual(r.context["certificats"]["periode_delivres"], 1)
+
+
+class LienMenuStatistiquesTests(Base):
+    def test_visible_pour_admin_et_formateur_valide(self):
+        lien = f'href="{reverse("certificates:statistiques")}"'
+        for user, visible in ((self.admin, True), (self.karim, True), (self.yasmine, False), (self.sami, False)):
+            self.client.force_login(user)
+            r = self.client.get(reverse("accounts:dashboard"))
+            (self.assertContains if visible else self.assertNotContains)(r, lien)

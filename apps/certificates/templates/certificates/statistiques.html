@@ -19,12 +19,19 @@
     {% endif %}
 </div>
 
+<nav class="periodes" aria-label="Période des statistiques">
+    <span class="periodes-libelle">Période :</span>
+    {% for p in periodes %}
+        <a href="?periode={{ p.code }}" class="periode{% if p.code == periode.code %} active{% endif %}"{% if p.code == periode.code %} aria-current="page"{% endif %}>{{ p.libelle }}</a>
+    {% endfor %}
+</nav>
+
 {% if utilisateurs %}
     <h2 class="section-title" style="margin-top: 0;">Utilisateurs</h2>
     <div class="stats">
         <div class="stat card"><strong>{{ utilisateurs.apprenants }}</strong><span>Apprenants</span></div>
         <div class="stat card"><strong>{{ utilisateurs.formateurs }}</strong><span>Formateurs validés</span></div>
-        <div class="stat card"><strong>{{ utilisateurs.actifs }}</strong><span>Connectés ces 30 derniers jours</span></div>
+        <div class="stat card"><strong>{{ utilisateurs.nouveaux }}</strong><span>Nouveaux inscrits</span><small>{{ periode.libelle }}</small></div>
         <a class="stat card{% if utilisateurs.en_attente %} stat-alert{% endif %}" href="{% url 'accounts:utilisateurs' %}?statut=attente">
             <strong>{{ utilisateurs.en_attente }}</strong><span>Formateurs en attente</span></a>
     </div>
@@ -32,28 +39,28 @@
 
 <h2 class="section-title"{% if not utilisateurs %} style="margin-top: 0;"{% endif %}>Certificats</h2>
 <div class="stats">
-    <div class="stat card"><strong>{{ certificats.total }}</strong><span>Certificats valides</span></div>
-    <div class="stat card"><strong>{{ certificats.ce_mois }}</strong><span>Délivrés ce mois-ci</span></div>
-    <div class="stat card"><strong>{% if certificats.score_moyen is not None %}{{ certificats.score_moyen }} %{% else %}—{% endif %}</strong><span>Score moyen</span></div>
-    <div class="stat card"><strong>{{ certificats.revoques }}</strong><span>Révoqués</span></div>
+    <div class="stat card"><strong>{{ certificats.periode_delivres }}</strong><span>Certificats délivrés</span><small>{{ periode.libelle }}</small></div>
+    <div class="stat card"><strong>{% if certificats.periode_score is not None %}{{ certificats.periode_score }} %{% else %}—{% endif %}</strong><span>Score moyen</span><small>{{ periode.libelle }}</small></div>
+    <div class="stat card"><strong>{{ certificats.periode_revoques }}</strong><span>Révoqués</span><small>{{ periode.libelle }}</small></div>
+    <div class="stat card"><strong>{{ certificats.total }}</strong><span>Certificats valides</span><small>Depuis le début</small></div>
 </div>
 
 <div class="charts">
     <section class="card chart-card">
         <h2>Certificats délivrés</h2>
-        <p class="muted">6 derniers mois</p>
+        <p class="muted">{{ periode.libelle }} · par {{ periode.pas }}</p>
         {% include "certificates/partials/barres.html" with serie=serie_certificats unite="certificat" %}
     </section>
     {% if serie_inscriptions %}
         <section class="card chart-card">
             <h2>Nouveaux inscrits</h2>
-            <p class="muted">6 derniers mois · {{ utilisateurs.nouveaux }} ces 30 derniers jours</p>
+            <p class="muted">{{ periode.libelle }} · par {{ periode.pas }}</p>
             {% include "certificates/partials/barres.html" with serie=serie_inscriptions unite="inscrit" %}
         </section>
     {% else %}
         <section class="card chart-card">
             <h2>Cours les plus certifiés</h2>
-            <p class="muted">Nombre de certificats valides</p>
+            <p class="muted">Certificats valides délivrés · {{ periode.libelle }}</p>
             {% include "certificates/partials/classement.html" with lignes=top_cours %}
         </section>
     {% endif %}
@@ -63,12 +70,12 @@
 <div class="charts">
     <section class="card chart-card">
         <h2>Cours les plus certifiés</h2>
-        <p class="muted">Nombre de certificats valides</p>
+        <p class="muted">Certificats valides délivrés · {{ periode.libelle }}</p>
         {% include "certificates/partials/classement.html" with lignes=top_cours %}
     </section>
     <section class="card chart-card">
         <h2>Formateurs les plus certifiants</h2>
-        <p class="muted">Certificats valides de leurs cours</p>
+        <p class="muted">Certificats valides de leurs cours · {{ periode.libelle }}</p>
         {% include "certificates/partials/classement.html" with lignes=top_formateurs %}
     </section>
 </div>
@@ -84,9 +91,9 @@
         <div class="stat card"><strong>—</strong><span>Taux de réussite</span><small>Disponible avec le module Cours</small></div>
     {% endif %}
     {% if utilisateurs %}
-        <div class="stat card"><strong>{{ messages_30j }}</strong><span>Messages échangés (30 jours)</span></div>
+        <div class="stat card"><strong>{{ messages_periode }}</strong><span>Messages échangés</span><small>{{ periode.libelle }}</small></div>
     {% else %}
-        <div class="stat card"><strong>{{ certificats.apprenants }}</strong><span>Apprenants certifiés</span></div>
+        <div class="stat card"><strong>{{ certificats.periode_apprenants }}</strong><span>Apprenants certifiés</span><small>{{ periode.libelle }}</small></div>
     {% endif %}
 </div>
 {% endblock %}

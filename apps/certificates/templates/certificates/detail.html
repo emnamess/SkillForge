@@ -56,7 +56,14 @@
         </div>
     </div>
 
-    <p class="certificat-code">Code de vérification <code>{{ certificat.code_verification }}</code> · {{ url_verification }}</p>
+    <div class="certificat-verification">
+        <div class="certificat-qr">{{ qr_code|safe }}</div>
+        <p class="certificat-code">
+            <strong>Scannez pour vérifier l'authenticité</strong>
+            Code de vérification <code>{{ certificat.code_verification }}</code><br>
+            <span class="certificat-url">{{ url_verification }}</span>
+        </p>
+    </div>
 </article>
 
 {% if not certificat.est_valide %}

@@ -14,3 +14,6 @@ coverage>=7.6
 
 # Moteur de recommandation de certifications (TF-IDF, similarité cosinus)
 scikit-learn>=1.5
+
+# QR code de vérification imprimé sur les certificats (SVG, pur Python)
+segno>=1.6
