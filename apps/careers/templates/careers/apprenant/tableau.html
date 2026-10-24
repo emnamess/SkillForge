@@ -1,0 +1,73 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Carrière{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/careers.css' %}">{% endblock %}
+
+{% block content %}
+<div class="page-entete">
+    <div>
+        <h1 class="page-title">Mon espace Carrière</h1>
+        <p class="page-subtitle">Les offres qui te correspondent et les compétences à travailler en priorité.</p>
+    </div>
+    <a href="{% url 'careers:offres' %}" class="btn btn-primary">Toutes les offres</a>
+</div>
+
+<div class="grid-2-1">
+    <div>
+        <div class="card">
+            <h2>Complétude du profil</h2>
+            <div class="completude">
+                <div class="barre" role="progressbar" aria-valuenow="{{ completude }}" aria-valuemin="0" aria-valuemax="100"><span style="width: {{ completude }}%"></span></div>
+                <strong>{{ completude }} %</strong>
+            </div>
+            {% if completude < 100 %}
+                <p class="muted">Un profil complet (CV, compétences, liens) améliore la lecture de ta candidature par les recruteurs.</p>
+                <a href="{% url 'careers:profil' %}" class="btn btn-sm btn-outline">Compléter mon profil</a>
+            {% endif %}
+        </div>
+
+        <div class="section-titre">
+            <h2>Offres pour toi</h2>
+            <a href="{% url 'careers:offres' %}">Voir tout</a>
+        </div>
+        <div class="offres-grille">
+            {% for offre in offres_pour_toi %}
+                {% include "careers/partials/carte_offre.html" with offre=offre avec_score=True %}
+            {% empty %}
+                <div class="card muted">Aucune nouvelle offre ouverte pour le moment.</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <aside class="colonne-laterale">
+        <div class="card">
+            <h2>Compétences à acquérir en priorité</h2>
+            {% if prioritaires %}
+                <ol class="priorites">
+                    {% for p in prioritaires %}
+                        <li><span>{{ p.competence__nom }}</span><span class="badge badge-orange">{{ p.nb_offres }} offre{{ p.nb_offres|pluralize }}</span></li>
+                    {% endfor %}
+                </ol>
+                <p class="muted">Les plus demandées dans les offres ouvertes que tu n'as pas encore au niveau requis.</p>
+            {% else %}
+                <p class="muted">Tu as déjà toutes les compétences demandées dans les offres ouvertes. Bravo !</p>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <h2>Dernières candidatures</h2>
+            {% for candidature in candidatures %}
+                <p>
+                    <a href="{{ candidature.get_absolute_url }}"><strong>{{ candidature.offre.titre }}</strong></a><br>
+                    <small class="muted">{{ candidature.offre.entreprise }}</small>
+                    {% include "careers/partials/statut.html" %}
+                </p>
+            {% empty %}
+                <p class="muted">Tu n'as pas encore postulé.</p>
+            {% endfor %}
+            {% if candidatures %}<a href="{% url 'careers:mes_candidatures' %}">Toutes mes candidatures</a>{% endif %}
+        </div>
+    </aside>
+</div>
+{% endblock %}

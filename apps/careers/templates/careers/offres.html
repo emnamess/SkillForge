@@ -1,0 +1,45 @@
+{% extends user.is_authenticated|yesno:"base_app.html,base.html" %}
+{% load static %}
+
+{% block title %}Offres de stage et d'emploi{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/careers.css' %}">{% endblock %}
+
+{% block content %}
+<div class="{% if not user.is_authenticated %}carriere-public{% endif %}">
+<div class="page-entete">
+    <div>
+        <h1 class="page-title">Offres de stage et d'emploi</h1>
+        <p class="page-subtitle">
+            {% if avec_score %}Triées selon ta compatibilité avec chaque offre.
+            {% else %}Des entreprises validées recrutent les apprenants SkillForge.{% endif %}
+        </p>
+    </div>
+    {% if not user.is_authenticated %}
+        <a href="{% url 'careers:inscription_recruteur' %}" class="btn btn-outline">Vous recrutez ? Créer un compte entreprise</a>
+    {% endif %}
+</div>
+
+<form method="get" class="card filtres">
+    <label class="sr-only" for="{{ filtres.q.id_for_label }}">{{ filtres.q.label }}</label>{{ filtres.q }}
+    <label class="sr-only" for="{{ filtres.type_contrat.id_for_label }}">{{ filtres.type_contrat.label }}</label>{{ filtres.type_contrat }}
+    <label class="sr-only" for="{{ filtres.mode_travail.id_for_label }}">{{ filtres.mode_travail.label }}</label>{{ filtres.mode_travail }}
+    <label class="sr-only" for="{{ filtres.ville.id_for_label }}">{{ filtres.ville.label }}</label>{{ filtres.ville }}
+    <label class="sr-only" for="{{ filtres.competence.id_for_label }}">{{ filtres.competence.label }}</label>{{ filtres.competence }}
+    {% if avec_score %}<label class="sr-only" for="{{ filtres.tri.id_for_label }}">{{ filtres.tri.label }}</label>{{ filtres.tri }}{% endif %}
+    <button type="submit" class="btn btn-primary">Filtrer</button>
+    {% if params %}<a href="{% url 'careers:offres' %}" class="btn btn-outline">Réinitialiser</a>{% endif %}
+</form>
+
+<p class="muted">{{ page.paginator.count }} offre{{ page.paginator.count|pluralize }} ouverte{{ page.paginator.count|pluralize }}</p>
+
+<div class="offres-grille">
+    {% for offre in page %}
+        {% include "careers/partials/carte_offre.html" with offre=offre avec_score=avec_score %}
+    {% empty %}
+        <div class="card muted">Aucune offre ne correspond à ces critères pour le moment.</div>
+    {% endfor %}
+</div>
+
+{% include "careers/partials/pagination.html" %}
+</div>
+{% endblock %}

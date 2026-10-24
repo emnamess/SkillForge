@@ -1,0 +1,31 @@
+<article class="card">
+    <div class="candidature-entete">
+        <div>
+            <h3><a href="{{ candidature.get_absolute_url }}">{{ candidature.offre.titre }}</a></h3>
+            <p class="muted sans-marge">{{ candidature.offre.entreprise }} · {{ candidature.offre.get_type_contrat_display }} · envoyée le {{ candidature.date_creation|date:"d/m/Y" }}</p>
+        </div>
+        <div class="badges">
+            {% if candidature.score_au_depot is not None %}<span class="badge badge-muted">Compatibilité au dépôt : {{ candidature.score_au_depot }} %</span>{% endif %}
+            {% include "careers/partials/statut.html" %}
+        </div>
+    </div>
+
+    {% if candidature.statut == "entretien" and candidature.date_entretien %}
+        <div class="entretien-encart">
+            <strong>Entretien le {{ candidature.date_entretien|date:"l j F Y à H:i" }}</strong><br>
+            {{ candidature.lieu_ou_lien_entretien|urlize }}
+        </div>
+    {% endif %}
+    {% if candidature.message_recruteur %}<p><strong>Message du recruteur :</strong> {{ candidature.message_recruteur }}</p>{% endif %}
+
+    {% include "careers/partials/frise.html" with historique=candidature.historique.all %}
+
+    {% if candidature.est_active %}
+        <form method="post" action="{% url 'careers:retirer_candidature' candidature.pk %}" class="avec-marge"
+              onsubmit="return confirm('Retirer cette candidature ? Cette action est définitive.');">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" class="btn btn-sm btn-outline">Retirer ma candidature</button>
+        </form>
+    {% endif %}
+</article>

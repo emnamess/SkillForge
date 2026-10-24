@@ -1,0 +1,13 @@
+{# Usage : {% include "careers/partials/ecart.html" with ecarts=ecarts %} #}
+{% if ecarts %}
+    <ul class="ecart-liste">
+        {% for e in ecarts %}
+            <li>
+                <span>{{ e.competence }} {% if e.obligatoire %}<span class="badge badge-rust">obligatoire</span>{% endif %}</span>
+                <span class="ecart-niveaux">{{ e.libelle_actuel }} → {{ e.libelle_requis }}</span>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p class="muted">Toutes les compétences demandées sont au niveau requis.</p>
+{% endif %}

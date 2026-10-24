@@ -1,0 +1,4 @@
+{% load carriere %}{# Usage : {% include "careers/partials/score.html" with resultat=offre.compatibilite %} #}
+<span class="score {{ resultat.score|classe_score }}" title="{% if resultat.obligatoires_manquantes %}Une compétence obligatoire manque{% else %}Score de compatibilité{% endif %}">
+    {% if resultat.score is None %}Non calculable{% else %}{{ resultat.score }} %{% endif %}{% if resultat.obligatoires_manquantes %} ⚠{% endif %}
+</span>

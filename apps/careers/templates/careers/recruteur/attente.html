@@ -1,0 +1,24 @@
+{% extends "base_app.html" %}
+
+{% block title %}Compte en attente de validation{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Compte en attente de validation</h1>
+{% if entreprise.statut == "refusee" %}
+    <div class="alert alert-error">
+        L'inscription de <strong>{{ entreprise }}</strong> a été refusée par un administrateur.
+        {% if entreprise.motif_refus %}<br>Motif : {{ entreprise.motif_refus }}{% endif %}
+    </div>
+    <p class="muted">Contactez l'équipe SkillForge via la messagerie si vous pensez qu'il s'agit d'une erreur.</p>
+{% else %}
+    <div class="alert alert-warning">
+        Votre entreprise <strong>{{ entreprise }}</strong> doit être validée par un administrateur.
+        Vous pourrez publier des offres et recevoir des candidatures dès sa validation.
+    </div>
+    <div class="card">
+        <h2>En attendant</h2>
+        <p class="muted">Vous recevrez une notification (et un e-mail) dès que la décision sera prise.
+            Vous pouvez déjà <a href="{% url 'careers:offres' %}">parcourir les offres publiées</a> sur la plateforme.</p>
+    </div>
+{% endif %}
+{% endblock %}

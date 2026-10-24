@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Inscription entreprise{% endblock %}
+
+{% block content %}
+<div class="auth-card auth-card-wide card">
+    <h1 class="page-title">Recruter sur SkillForge</h1>
+    <p class="page-subtitle">Créez votre compte recruteur et présentez votre entreprise. Un administrateur la valide avant la publication de vos offres.</p>
+    <form method="post" enctype="multipart/form-data" class="form" novalidate>
+        {% csrf_token %}
+        {% for error in form.non_field_errors %}<div class="alert alert-error">{{ error }}</div>{% endfor %}
+
+        <h2>Vous</h2>
+        <div class="form-row">
+            {% include "partials/form_field.html" with field=form.first_name %}
+            {% include "partials/form_field.html" with field=form.last_name %}
+        </div>
+        {% include "partials/form_field.html" with field=form.email %}
+        {% include "partials/form_field.html" with field=form.password1 %}
+        {% include "partials/form_field.html" with field=form.password2 %}
+
+        <h2>Votre entreprise</h2>
+        {% include "partials/form_field.html" with field=form_entreprise.nom %}
+        <div class="form-row">
+            {% include "partials/form_field.html" with field=form_entreprise.secteur %}
+            {% include "partials/form_field.html" with field=form_entreprise.ville %}
+        </div>
+        <div class="form-row">
+            {% include "partials/form_field.html" with field=form_entreprise.site_web %}
+            {% include "partials/form_field.html" with field=form_entreprise.matricule_fiscal %}
+        </div>
+        {% include "partials/form_field.html" with field=form_entreprise.description %}
+        {% include "partials/form_field.html" with field=form_entreprise.logo %}
+
+        <button type="submit" class="btn btn-primary btn-block">Créer mon compte entreprise</button>
+    </form>
+    <p class="auth-switch">Déjà inscrit ? <a href="{% url 'accounts:login' %}">Se connecter</a></p>
+</div>
+{% endblock %}

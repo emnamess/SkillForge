@@ -1,0 +1,82 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Profil carrière{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/careers.css' %}">{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Profil carrière</h1>
+<p class="page-subtitle">Ce que voient les recruteurs quand tu postules · profil complété à {{ completude }} %.</p>
+
+<div class="grid-2-1">
+    <form method="post" class="form card" novalidate>
+        {% csrf_token %}
+        <h2>Présentation</h2>
+        {% include "partials/form_field.html" with field=form.titre %}
+        <div class="form-row">
+            {% include "partials/form_field.html" with field=form.ville %}
+            {% include "partials/form_field.html" with field=form.disponibilite %}
+        </div>
+        <div class="form-field choix-multiples">
+            <label>{{ form.types_contrat_recherches.label }}</label>
+            {{ form.types_contrat_recherches }}
+        </div>
+        {% include "partials/form_field.html" with field=form.presentation %}
+        {% include "partials/form_field.html" with field=form.lien_github %}
+        {% include "partials/form_field.html" with field=form.lien_linkedin %}
+        {% include "partials/form_field.html" with field=form.lien_portfolio %}
+
+        <h2 class="avec-marge">Mes compétences</h2>
+        <p class="muted">Indique ton niveau réel : il sert à calculer ta compatibilité avec chaque offre.</p>
+        {{ formset.management_form }}
+        {% for error in formset.non_form_errors %}<div class="alert alert-error">{{ error }}</div>{% endfor %}
+        {% for f in formset %}
+            {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
+            {% for error in f.non_field_errors %}<div class="alert alert-error">{{ error }}</div>{% endfor %}
+            <div class="formset-ligne">
+                {% include "partials/form_field.html" with field=f.competence %}
+                {% include "partials/form_field.html" with field=f.niveau %}
+                {% if f.instance.pk %}<label class="supprimer">{{ f.DELETE }} Retirer</label>{% else %}<span></span>{% endif %}
+            </div>
+        {% endfor %}
+
+        <button type="submit" class="btn btn-primary">Enregistrer mon profil</button>
+    </form>
+
+    <aside class="colonne-laterale">
+        <div class="card" id="cv">
+            <h2>Mon CV</h2>
+            {% if profil.cv %}
+                <p><a href="{% url 'careers:cv_profil' profil.pk %}" target="_blank" rel="noopener">Voir mon CV actuel</a></p>
+            {% else %}
+                <p class="muted">Aucun CV déposé. Il sera joint à chacune de tes candidatures.</p>
+            {% endif %}
+            <form method="post" action="{% url 'careers:deposer_cv' %}" enctype="multipart/form-data" class="form">
+                {% csrf_token %}
+                {% include "partials/form_field.html" with field=form_cv.cv %}
+                <button type="submit" class="btn btn-outline btn-block">{% if profil.cv %}Remplacer{% else %}Déposer{% endif %} le CV</button>
+            </form>
+        </div>
+
+        {% if cv_analyse %}
+        <div class="card">
+            <h2>Compétences repérées dans ton CV</h2>
+            {% if suggestions %}
+                <form method="post" action="{% url 'careers:ajouter_suggestions' %}">
+                    {% csrf_token %}
+                    <div class="suggestions">
+                        {% for c in suggestions %}
+                            <label><input type="checkbox" name="competences" value="{{ c.pk }}" checked> {{ c }}</label>
+                        {% endfor %}
+                    </div>
+                    <p class="muted">Rien n'est ajouté sans ton accord : décoche ce qui ne te correspond pas.</p>
+                    <button type="submit" class="btn btn-primary btn-block">Ajouter à mon profil</button>
+                </form>
+            {% else %}
+                <p class="muted">Aucune suggestion.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </aside>
+</div>
+{% endblock %}

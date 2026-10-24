@@ -1,0 +1,209 @@
+/* Espace Carrière : offres, compatibilité, candidatures et Kanban */
+
+.carriere-public { max-width: 1100px; margin: 0 auto; padding: 2rem 16px 3rem; }
+
+.page-entete { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+.page-entete .btn { flex: none; }
+
+.section-titre { display: flex; justify-content: space-between; align-items: baseline; margin: 1.75rem 0 0.75rem; }
+.section-titre h2 { margin: 0; font-size: 1.15rem; }
+
+/* ---------- Badges de compatibilité ---------- */
+
+.score {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    font: 600 0.85rem var(--font-body);
+    white-space: nowrap;
+}
+.score-haut { background: var(--green-soft); color: var(--green); }
+.score-moyen { background: var(--orange-soft); color: #8a5a10; }
+.score-bas { background: var(--rust-soft); color: var(--rust); }
+.score-na { background: #ecebe7; color: var(--muted); }
+.avertissement { color: var(--rust); font-size: 0.85rem; }
+
+/* ---------- Cartes d'offres ---------- */
+
+.offres-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+.carte-offre { display: flex; flex-direction: column; gap: 0.6rem; padding: 1.25rem; color: var(--text); }
+.carte-offre:hover { border-color: var(--indigo); }
+.carte-offre-entete { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; }
+.carte-offre h3 { margin: 0; font-size: 1.05rem; }
+.carte-offre .entreprise { margin: 0.15rem 0 0; color: var(--muted); font-size: 0.9rem; }
+.badges { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.competences-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0; padding: 0; list-style: none; }
+.competences-tags li {
+    padding: 0.15rem 0.55rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+.competences-tags li.obligatoire { border-color: var(--indigo); color: var(--indigo); }
+.carte-offre-pied { margin-top: auto; display: flex; justify-content: space-between; color: var(--muted); font-size: 0.85rem; }
+
+.logo-entreprise {
+    width: 44px;
+    height: 44px;
+    flex: none;
+    border-radius: 10px;
+    object-fit: contain;
+    background: var(--indigo-soft);
+    color: var(--indigo);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font: 700 1rem var(--font-title);
+}
+
+/* ---------- Détail d'une offre ---------- */
+
+.offre-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; margin: 1rem 0; }
+.offre-meta div { display: flex; flex-direction: column; gap: 0.15rem; }
+.offre-meta small { color: var(--muted); font-size: 0.8rem; }
+.description { white-space: pre-line; line-height: 1.6; }
+.colonne-laterale { display: flex; flex-direction: column; gap: 1rem; }
+
+.jauge { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; text-align: center; }
+.jauge svg { width: 140px; height: 140px; transform: rotate(-90deg); }
+.jauge .fond { fill: none; stroke: var(--indigo-soft); stroke-width: 12; }
+.jauge .valeur { fill: none; stroke-width: 12; stroke-linecap: round; transition: stroke-dashoffset 0.6s ease; }
+.jauge.score-haut .valeur { stroke: var(--green); }
+.jauge.score-moyen .valeur { stroke: var(--orange); }
+.jauge.score-bas .valeur { stroke: var(--rust); }
+.jauge-centre { position: relative; }
+.jauge-texte {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 700 1.8rem var(--font-title);
+    color: var(--navy);
+}
+.jauge.score-na .jauge-texte { font-size: 0.9rem; color: var(--muted); padding: 0 1.5rem; }
+
+.ecart-liste { list-style: none; margin: 0.5rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.ecart-liste li { display: flex; justify-content: space-between; gap: 0.5rem; align-items: center; font-size: 0.9rem; }
+.ecart-niveaux { color: var(--muted); font-size: 0.85rem; white-space: nowrap; }
+
+/* ---------- Tableau de bord apprenant ---------- */
+
+.completude { display: flex; align-items: center; gap: 1rem; }
+.barre { flex: 1; height: 10px; border-radius: 999px; background: var(--indigo-soft); overflow: hidden; }
+.barre span { display: block; height: 100%; background: var(--indigo); border-radius: 999px; }
+.priorites { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+.priorites li { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+
+/* ---------- Profil carrière ---------- */
+
+.formset-ligne { display: grid; grid-template-columns: 2fr 1fr auto; gap: 0.75rem; align-items: end; }
+.formset-ligne .form-field label { margin-top: 0.5rem; }
+.formset-ligne .supprimer { padding-bottom: 0.6rem; font-size: 0.85rem; color: var(--muted); }
+.formset-ligne .supprimer input { width: auto; }
+.form .choix-multiples ul, .form .choix-multiples div { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; }
+.form .choix-multiples label { display: flex; align-items: center; gap: 0.35rem; margin: 0; font-weight: 400; }
+.form .choix-multiples input { width: auto; }
+.suggestions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.75rem 0; }
+.suggestions label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+}
+.suggestions label:has(input:checked) { border-color: var(--indigo); background: var(--indigo-soft); }
+
+/* ---------- Candidatures et frise chronologique ---------- */
+
+.candidatures { display: flex; flex-direction: column; gap: 1rem; }
+.candidature-entete { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+.candidature-entete h3 { margin: 0; font-size: 1.05rem; }
+.statut-envoyee { background: var(--indigo-soft); color: var(--indigo); }
+.statut-en_examen { background: var(--orange-soft); color: #8a5a10; }
+.statut-entretien { background: #f6e6ee; color: var(--pink); }
+.statut-acceptee { background: var(--green-soft); color: var(--green); }
+.statut-refusee { background: var(--rust-soft); color: var(--rust); }
+.statut-retiree { background: #ecebe7; color: var(--muted); }
+
+.frise { list-style: none; margin: 1rem 0 0; padding: 0 0 0 1.1rem; border-left: 2px solid var(--indigo-soft); }
+.frise li { position: relative; padding: 0 0 0.9rem 0.6rem; }
+.frise li::before {
+    content: "";
+    position: absolute;
+    left: -1.55rem;
+    top: 0.3rem;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--indigo);
+    border: 2px solid var(--white);
+}
+.frise li:last-child { padding-bottom: 0; }
+.frise small { display: block; color: var(--muted); }
+.frise blockquote { margin: 0.3rem 0 0; color: var(--text); font-style: italic; }
+
+.entretien-encart { margin-top: 1rem; padding: 0.9rem 1rem; border-radius: 10px; background: #f6e6ee; }
+.entretien-encart strong { color: var(--pink); }
+
+/* ---------- Kanban ---------- */
+
+.kanban { display: grid; grid-template-columns: repeat(6, minmax(220px, 1fr)); gap: 0.75rem; overflow-x: auto; padding-bottom: 0.5rem; }
+.kanban-colonne {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    min-height: 320px;
+    padding: 0.75rem;
+    border-radius: var(--radius);
+    background: #ebe7dd;
+    transition: background 0.15s, outline-color 0.15s;
+    outline: 2px dashed transparent;
+}
+.kanban-colonne.survol { background: var(--indigo-soft); outline-color: var(--indigo); }
+.kanban-colonne h2 { display: flex; justify-content: space-between; margin: 0 0 0.25rem; font-size: 0.95rem; }
+.kanban-colonne .compteur { color: var(--muted); font-family: var(--font-body); font-weight: 500; }
+.kanban-carte { padding: 0.85rem; cursor: grab; display: flex; flex-direction: column; gap: 0.5rem; }
+.kanban-carte.deplacement { opacity: 0.5; }
+.kanban-carte.refusee-anim { animation: secousse 0.4s; border-color: var(--rust); }
+.kanban-carte .user-cell strong { font-size: 0.92rem; }
+.kanban-carte form { display: flex; gap: 0.35rem; }
+.kanban-carte select { flex: 1; min-width: 0; padding: 0.3rem; border: 1px solid var(--border); border-radius: 6px; font: inherit; font-size: 0.8rem; }
+.kanban-vide { color: var(--muted); font-size: 0.85rem; text-align: center; margin: 1rem 0; }
+.kanban-message { position: sticky; top: 0; z-index: 2; }
+@keyframes secousse {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* ---------- Statistiques ---------- */
+
+.barres { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.55rem; }
+.barres li { display: grid; grid-template-columns: 150px 1fr 40px; gap: 0.75rem; align-items: center; font-size: 0.9rem; }
+.barres .barre span { background: var(--indigo); }
+.barres strong { text-align: right; }
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+@media (max-width: 860px) {
+    .formset-ligne { grid-template-columns: 1fr; }
+    .barres li { grid-template-columns: 100px 1fr 32px; }
+}
+
+.sans-marge { margin: 0; }
+.avec-marge { margin-top: 1.25rem; }
