@@ -1,0 +1,41 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}{% if creation %}Créer un quiz{% else %}Modifier le quiz{% endif %}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/quizzes.css' %}">
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'quizzes:index' %}" class="back-link">← Mes quiz</a>
+
+<h1 class="page-title">{% if creation %}Créer un quiz{% else %}Modifier le quiz{% endif %}</h1>
+
+<div class="card form-narrow">
+    <form method="post" class="form">
+        {% csrf_token %}
+
+        {% include "partials/form_field.html" with field=form.titre %}
+        {% include "partials/form_field.html" with field=form.description %}
+
+        <div class="form-row">
+            {% include "partials/form_field.html" with field=form.seuil_reussite %}
+            {% include "partials/form_field.html" with field=form.duree_minutes %}
+        </div>
+
+        {% include "partials/form_field.html" with field=form.est_publie %}
+
+        <div style="display:flex; gap:0.75rem; margin-top:1.5rem; justify-content:flex-end;">
+            {% if not creation %}
+            <a href="{% url 'quizzes:quiz_detail' quiz.pk %}" class="btn btn-outline">Annuler</a>
+            {% else %}
+            <a href="{% url 'quizzes:index' %}" class="btn btn-outline">Annuler</a>
+            {% endif %}
+            <button type="submit" class="btn btn-primary">
+                {% if creation %}Créer et ajouter des questions{% else %}Enregistrer{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

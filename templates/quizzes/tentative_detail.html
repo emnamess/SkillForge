@@ -1,0 +1,102 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Résultats · {{ tentative.quiz.titre }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/quizzes.css' %}">
+{% endblock %}
+
+{% block content %}
+{% if user.est_apprenant %}
+<a href="{% url 'quizzes:mes_tentatives' %}" class="back-link">← Mes résultats</a>
+{% else %}
+<a href="{% url 'quizzes:quiz_resultats' tentative.quiz.pk %}" class="back-link">← Résultats du quiz</a>
+{% endif %}
+
+<h1 class="page-title">{{ tentative.quiz.titre }}</h1>
+
+<div class="card score-card">
+    <div class="score-value">{{ tentative.score }}/{{ tentative.score_total }}</div>
+    <div class="score-percent">{{ tentative.pourcentage }}%</div>
+    <div>
+        {% if tentative.reussie %}
+        <span class="score-badge score-reussi">🏆 Quiz réussi !</span>
+        {% else %}
+        <span class="score-badge score-echoue">❌ Quiz non réussi</span>
+        {% endif %}
+    </div>
+    <div class="muted" style="margin-top:1rem; font-size:0.85rem;">
+        Passé le {{ tentative.date_debut|date:"d/m/Y à H:i" }}
+    </div>
+    {% if not tentative.reussie %}
+    <p class="muted" style="font-size:0.85rem; margin:0.5rem 0 0;">Seuil de réussite : {{ tentative.quiz.seuil_reussite }}%</p>
+    {% endif %}
+</div>
+
+<h2 style="margin-bottom:1rem;">Correction détaillée</h2>
+
+{% for reponse in reponses %}
+<div class="card correction-card">
+    <div class="correction-header">
+        <div style="display:flex; align-items:center; gap:0.75rem; flex:1;">
+            <span class="question-numero">{{ forloop.counter }}</span>
+            <strong>{{ reponse.question.enonce }}</strong>
+        </div>
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+            {% if reponse.points_obtenus == reponse.question.points %}
+                <span class="correction-points correct">{{ reponse.points_obtenus }}/{{ reponse.question.points }} pt</span>
+                {% if reponse.question.type != 'texte_libre' %}<span class="badge badge-green">✓ Correct</span>{% endif %}
+            {% elif reponse.points_obtenus > 0 %}
+                <span class="correction-points partiel">{{ reponse.points_obtenus }}/{{ reponse.question.points }} pt</span>
+                <span class="badge badge-orange">~ Partiel</span>
+            {% else %}
+                <span class="correction-points incorrect">0/{{ reponse.question.points }} pt</span>
+                {% if reponse.question.type != 'texte_libre' %}<span class="badge badge-rust">✗ Incorrect</span>{% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    {% if reponse.question.type == 'qcm' or reponse.question.type == 'vrai_faux' %}
+    <ul class="correction-choix">
+        {% for choix in reponse.question.choix.all %}
+        <li class="{% if choix.est_correct %}bonne-reponse{% elif choix == reponse.choix_selectionne %}mauvaise-selection{% else %}choix-neutre{% endif %}">
+            {% if choix.est_correct %}✓ {% elif choix == reponse.choix_selectionne %}✗ {% else %}&nbsp;&nbsp;{% endif %}
+            {{ choix.texte }}
+            {% if choix == reponse.choix_selectionne and not choix.est_correct %}<em style="font-size:0.8rem;">(votre réponse)</em>{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% if not reponse.choix_selectionne %}<p class="muted" style="font-size:0.85rem; margin:0.5rem 0 0 1rem;">— Aucune réponse sélectionnée</p>{% endif %}
+
+    {% elif reponse.question.type == 'texte_libre' %}
+    {% if reponse.texte_libre %}
+    <div class="reponse-libre-texte">{{ reponse.texte_libre }}</div>
+    {% else %}
+    <p class="muted" style="font-size:0.85rem;">— Aucune réponse fournie</p>
+    {% endif %}
+    {% if reponse.feedback_ia %}
+    <div class="feedback-ia">
+        <strong>🤖 Feedback de l'IA</strong>
+        {{ reponse.feedback_ia }}
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if reponse.question.explication %}
+    <div class="explication">
+        <strong>💡 Explication</strong>
+        {{ reponse.question.explication }}
+    </div>
+    {% endif %}
+</div>
+{% endfor %}
+
+<div style="text-align:center; margin-top:2rem; display:flex; justify-content:center; gap:0.75rem; flex-wrap:wrap;">
+    {% if user.est_apprenant %}
+    <a href="{% url 'quizzes:passer_quiz' tentative.quiz.pk %}" class="btn btn-outline">🔄 Repasser le quiz</a>
+    <a href="{% url 'quizzes:mes_tentatives' %}" class="btn btn-primary">Mes résultats →</a>
+    {% endif %}
+    <a href="{% url 'quizzes:tentative_recorriger' tentative.pk %}" class="btn btn-outline" style="border-color:var(--indigo); color:var(--indigo); font-weight:600;">✨ Recorriger les réponses avec l'IA</a>
+</div>
+{% endblock %}

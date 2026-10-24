@@ -1,0 +1,70 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Générer des questions par IA · {{ quiz.titre }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/quizzes.css' %}">
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'quizzes:questions_gerer' quiz.pk %}" class="back-link">← Questions du quiz</a>
+
+<div class="card form-narrow" style="margin-top:1rem;">
+    <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:1rem;">
+        <span style="font-size:1.8rem;">✨</span>
+        <div>
+            <h1 class="page-title" style="font-size:1.4rem; margin:0;">Générer des questions par l'IA</h1>
+            <p class="page-subtitle" style="margin:0;">Alimentez automatiquement votre quiz avec Google Gemini</p>
+        </div>
+    </div>
+
+    <form method="post" class="form">
+        {% csrf_token %}
+
+        <div class="form-field">
+            <label for="id_theme">Thème ou sujet des questions <span class="required">*</span></label>
+            <input type="text" id="id_theme" name="theme" value="{{ quiz.titre }}" placeholder="Ex : Les jointures SQL avancées, GROUP BY et HAVING" required>
+            <small class="help">Soyez précis pour obtenir des questions ciblées et pertinentes.</small>
+        </div>
+
+        <div class="form-row">
+            <div class="form-field">
+                <label for="id_niveau">Niveau de difficulté</label>
+                <select id="id_niveau" name="niveau">
+                    <option value="Débutant">Débutant (Notions de base)</option>
+                    <option value="Intermédiaire" selected>Intermédiaire (Standard)</option>
+                    <option value="Avancé">Avancé (Cas complexes / Pièges)</option>
+                </select>
+            </div>
+            <div class="form-field">
+                <label for="id_nombre">Nombre de questions</label>
+                <select id="id_nombre" name="nombre">
+                    <option value="2">2 questions</option>
+                    <option value="3" selected>3 questions</option>
+                    <option value="5">5 questions</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="background:var(--indigo-soft); border-left:3px solid var(--indigo); padding:0.75rem 1rem; border-radius:0 8px 8px 0; margin:1rem 0; font-size:0.85rem;">
+            <strong>💡 Fonctionnement :</strong> L'IA va créer un ensemble panaché de questions à choix multiples (QCM) et de questions à réponse libre accompagnées de leurs critères de correction. Vous pourrez ensuite les ajuster ou les supprimer à volonté.
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:0.75rem; margin-top:1.5rem;">
+            <a href="{% url 'quizzes:questions_gerer' quiz.pk %}" class="btn btn-outline">Annuler</a>
+            <button type="submit" class="btn btn-primary" id="btn-generer">
+                ✨ Lancer la génération
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.querySelector('form').addEventListener('submit', function() {
+        const btn = document.getElementById('btn-generer');
+        btn.disabled = true;
+        btn.textContent = '⏳ Génération en cours par Gemini...';
+    });
+</script>
+{% endblock %}

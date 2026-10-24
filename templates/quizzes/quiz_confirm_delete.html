@@ -1,0 +1,28 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Supprimer le quiz{% endblock %}
+
+{% block content %}
+<a href="{% url 'quizzes:quiz_detail' quiz.pk %}" class="back-link">← {{ quiz.titre }}</a>
+
+<div class="card form-narrow" style="margin-top:1rem;">
+    <h2 style="color:var(--rust);">⚠ Supprimer le quiz</h2>
+    <p>Voulez-vous vraiment supprimer le quiz suivant ?</p>
+    <div style="padding:1rem; background:var(--rust-soft); border-radius:8px; margin:1rem 0;">
+        <strong>« {{ quiz.titre }} »</strong>
+        {% if quiz.description %}<p style="margin:0.5rem 0 0; font-size:0.9rem;">{{ quiz.description|truncatechars:100 }}</p>{% endif %}
+    </div>
+    <p class="muted" style="font-size:0.9rem;">
+        ⚠ Cette action supprimera également :<br>
+        — {{ quiz.nombre_questions }} question{{ quiz.nombre_questions|pluralize }}<br>
+        — {{ quiz.nombre_tentatives }} tentative{{ quiz.nombre_tentatives|pluralize }} d'apprenants<br>
+        Cette action est <strong>irréversible</strong>.
+    </p>
+    <form method="post" style="display:flex; gap:0.75rem; margin-top:1rem;">
+        {% csrf_token %}
+        <a href="{% url 'quizzes:quiz_detail' quiz.pk %}" class="btn btn-outline">Annuler</a>
+        <button type="submit" class="btn" style="background:var(--rust);color:white;">Supprimer définitivement</button>
+    </form>
+</div>
+{% endblock %}

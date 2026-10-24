@@ -1,0 +1,84 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}{% if creation %}Ajouter une question{% else %}Modifier la question{% endif %}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/quizzes.css' %}">
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'quizzes:questions_gerer' quiz.pk %}" class="back-link">← Questions du quiz</a>
+
+<h1 class="page-title">{% if creation %}Ajouter une question{% else %}Modifier la question{% endif %}</h1>
+<p class="page-subtitle">{{ quiz.titre }}</p>
+
+<form method="post" class="form">
+    {% csrf_token %}
+
+    <div class="card" style="margin-bottom:1rem;">
+        <h2>Question</h2>
+        {% include "partials/form_field.html" with field=form.type %}
+        {% include "partials/form_field.html" with field=form.enonce %}
+        <div class="form-row">
+            {% include "partials/form_field.html" with field=form.points %}
+            {% include "partials/form_field.html" with field=form.ordre %}
+        </div>
+        {% include "partials/form_field.html" with field=form.explication %}
+        {% include "partials/form_field.html" with field=form.consigne_ia %}
+        <small class="help">⚠ La consigne IA n'est utilisée que pour les questions <strong>Réponse libre</strong>.</small>
+    </div>
+
+    <div class="card choix-formset" id="section-choix">
+        <h2>Choix de réponse <span class="muted" style="font-size:0.85rem; font-weight:400;">(QCM et Vrai/Faux)</span></h2>
+        {{ formset.management_form }}
+        <div style="display:grid; grid-template-columns:1fr 70px auto auto; gap:0.5rem; align-items:center; padding:0.4rem 0.5rem; background:#f9f8f5; border-radius:6px; margin-bottom:0.5rem;">
+            <span style="font-size:0.75rem; color:var(--muted); font-weight:600; text-transform:uppercase;">Texte</span>
+            <span style="font-size:0.75rem; color:var(--muted); font-weight:600; text-transform:uppercase;">Ordre</span>
+            <span style="font-size:0.75rem; color:var(--muted); font-weight:600; text-transform:uppercase;">Correct</span>
+            <span style="font-size:0.75rem; color:var(--muted); font-weight:600; text-transform:uppercase;">Suppr.</span>
+        </div>
+        {% for choix_form in formset %}
+        <div class="choix-row">
+            {{ choix_form.id }}
+            {{ choix_form.texte }}
+            {{ choix_form.ordre }}
+            <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.85rem;">{{ choix_form.est_correct }} Bonne rép.</label>
+            <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.85rem;color:var(--rust);">{{ choix_form.DELETE }} Suppr.</label>
+        </div>
+        {% if choix_form.errors %}{% for f, e in choix_form.errors.items %}<small class="error">{{ e }}</small>{% endfor %}{% endif %}
+        {% endfor %}
+        {% if formset.non_form_errors %}<small class="error">{{ formset.non_form_errors }}</small>{% endif %}
+    </div>
+
+    <div style="display:flex;gap:0.75rem;margin-top:1.5rem;justify-content:flex-end;">
+        <a href="{% url 'quizzes:questions_gerer' quiz.pk %}" class="btn btn-outline">Annuler</a>
+        <button type="submit" class="btn btn-primary">{% if creation %}Ajouter{% else %}Enregistrer{% endif %}</button>
+    </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const typeSelect = document.getElementById('id_type');
+    const choixSection = document.getElementById('section-choix');
+    const consigneField = document.getElementById('id_consigne_ia') ? document.getElementById('id_consigne_ia').closest('.form-field') : null;
+
+    function toggleFields() {
+        if (!typeSelect) return;
+        const val = typeSelect.value;
+        if (val === 'texte_libre') {
+            if (choixSection) choixSection.style.display = 'none';
+            if (consigneField) consigneField.style.display = 'block';
+        } else {
+            if (choixSection) choixSection.style.display = 'block';
+            if (consigneField) consigneField.style.display = 'none';
+        }
+    }
+
+    if (typeSelect) {
+        typeSelect.addEventListener('change', toggleFields);
+        toggleFields();
+    }
+});
+</script>
+{% endblock %}

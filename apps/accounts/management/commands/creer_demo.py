@@ -8,7 +8,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from apps.accounts.models import User
@@ -62,7 +62,9 @@ class Command(BaseCommand):
             raise CommandError("Données de démo refusées hors développement (DEBUG=False). Utilisez --force.")
 
         if reinitialiser:
-            demo = User.objects.filter(email__endswith=f"@{DOMAINE}")
+            demo = User.objects.filter(
+                models.Q(email__endswith=f"@{DOMAINE}") | models.Q(username__startswith="demo_")
+            )
             # Les conversations (ManyToMany) ne sont pas supprimées en cascade avec les comptes
             Conversation.objects.filter(participants__in=demo).delete()
             n, _ = demo.delete()
@@ -73,16 +75,22 @@ class Command(BaseCommand):
             if nouveaux:
                 self.creer_conversations(comptes)
                 self.creer_notifications(comptes)
+            self.creer_quiz_demo(comptes)
 
         self.afficher_resume(nouveaux)
 
     def creer_comptes(self):
         comptes, nouveaux = {}, False
         for identifiant, prenom, nom, role, specialite, valide in COMPTES:
-            user = User.objects.filter(username=f"demo_{identifiant}").first()
+            nom_utilisateur = f"demo_{identifiant}"
+            adresse_email = f"{identifiant}@{DOMAINE}"
+            # Vérifie par nom d'utilisateur OU par adresse e-mail pour éviter IntegrityError
+            user = User.objects.filter(
+                models.Q(username=nom_utilisateur) | models.Q(email=adresse_email)
+            ).first()
             if user is None:
                 user = User.objects.create_user(
-                    username=f"demo_{identifiant}", email=f"{identifiant}@{DOMAINE}", password=MOT_DE_PASSE,
+                    username=nom_utilisateur, email=adresse_email, password=MOT_DE_PASSE,
                     first_name=prenom, last_name=nom, role=role, specialite=specialite, est_valide=valide,
                     is_staff=role == User.Role.ADMINISTRATEUR, is_superuser=role == User.Role.ADMINISTRATEUR,
                     bio=f"Compte de démonstration ({User.Role(role).label.lower()}).",
@@ -90,6 +98,55 @@ class Command(BaseCommand):
                 nouveaux = True
             comptes[identifiant] = user
         return comptes, nouveaux
+
+    def creer_quiz_demo(self, comptes):
+        from apps.quizzes.models import Choix, Question, Quiz
+        formateur = comptes.get("leila") or comptes.get("karim")
+        if not formateur or Quiz.objects.filter(titre="Requêtes SQL et Fondamentaux").exists():
+            return
+
+        quiz = Quiz.objects.create(
+            formateur=formateur,
+            titre="Requêtes SQL et Fondamentaux",
+            description="Testez vos connaissances sur les requêtes SQL : filtres WHERE, jointures et agrégations.",
+            seuil_reussite=50,
+            est_publie=True,
+            duree_minutes=15,
+        )
+
+        q1 = Question.objects.create(
+            quiz=quiz,
+            type=Question.Type.QCM,
+            enonce="Quelle clause SQL permet de filtrer les enregistrements avant tout regroupement ?",
+            points=1,
+            ordre=1,
+            explication="La clause WHERE filtre les lignes individuellement avant le GROUP BY.",
+        )
+        Choix.objects.create(question=q1, texte="ORDER BY", est_correct=False, ordre=1)
+        Choix.objects.create(question=q1, texte="WHERE", est_correct=True, ordre=2)
+        Choix.objects.create(question=q1, texte="HAVING", est_correct=False, ordre=3)
+        Choix.objects.create(question=q1, texte="LIMIT", est_correct=False, ordre=4)
+
+        q2 = Question.objects.create(
+            quiz=quiz,
+            type=Question.Type.VRAI_FAUX,
+            enonce="La commande DROP TABLE supprime uniquement les données et conserve la structure de la table.",
+            points=1,
+            ordre=2,
+            explication="Faux, DROP TABLE supprime la table et sa structure. C'est TRUNCATE ou DELETE qui vide les données.",
+        )
+        Choix.objects.create(question=q2, texte="Vrai", est_correct=False, ordre=1)
+        Choix.objects.create(question=q2, texte="Faux", est_correct=True, ordre=2)
+
+        q3 = Question.objects.create(
+            quiz=quiz,
+            type=Question.Type.TEXTE_LIBRE,
+            enonce="Quelle commande SQL permet de récupérer des données dans une table et comment s'articule sa structure de base ?",
+            points=2,
+            ordre=3,
+            explication="La commande SELECT permet de projeter des colonnes avec SELECT ... FROM nom_table.",
+            consigne_ia="L'apprenant doit mentionner le mot-clé SELECT et idéalement FROM pour spécifier la table source.",
+        )
 
     def creer_conversations(self, comptes):
         autorise = ResultatModeration(AUTORISE)

@@ -1,0 +1,44 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Quiz disponibles{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/quizzes.css' %}">
+{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Quiz disponibles</h1>
+<p class="page-subtitle">Testez vos connaissances et obtenez un feedback personnalisé par l'IA</p>
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.75rem;">
+    <a href="{% url 'quizzes:mes_tentatives' %}" class="btn btn-outline">📊 Mes résultats</a>
+</div>
+
+{% if quiz_list %}
+<div class="quiz-grid">
+    {% for quiz in quiz_list %}
+    <div class="card quiz-card">
+        <h3>{{ quiz.titre }}</h3>
+        {% if quiz.description %}
+        <p>{{ quiz.description|truncatechars:120 }}</p>
+        {% endif %}
+        <div class="quiz-meta">
+            <span>📝 {{ quiz.nb_questions }} question{{ quiz.nb_questions|pluralize }}</span>
+            {% if quiz.duree_minutes %}
+            <span>⏱ {{ quiz.duree_minutes }} min</span>
+            {% endif %}
+            <span>🎯 Seuil : {{ quiz.seuil_reussite }}%</span>
+        </div>
+        <a href="{% url 'quizzes:quiz_detail' quiz.pk %}" class="btn btn-primary">Voir le quiz →</a>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card empty-state">
+    <p style="font-size:2.5rem; margin:0;">📚</p>
+    <p>Aucun quiz n'est disponible pour le moment.</p>
+    <p class="muted">Revenez bientôt, les formateurs préparent du contenu !</p>
+</div>
+{% endif %}
+{% endblock %}
