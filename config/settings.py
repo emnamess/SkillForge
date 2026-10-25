@@ -8,17 +8,35 @@ import os
 import sys
 from pathlib import Path
 
+import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(BASE_DIR / ".env")
 
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-dev-only-change-me")
-
 DEBUG = os.getenv("DJANGO_DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+CLE_DEV = "django-insecure-dev-only-change-me"
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", CLE_DEV)
+if not DEBUG and SECRET_KEY in ("", CLE_DEV, "change-me"):
+    raise ImproperlyConfigured("DJANGO_SECRET_KEY doit être défini en production (DJANGO_DEBUG=False).")
+
+# Domaine public fourni automatiquement par Railway (ex. skillforge-production.up.railway.app)
+DOMAINE_PUBLIC = os.getenv("RAILWAY_PUBLIC_DOMAIN", "")
+
+ALLOWED_HOSTS = [h for h in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h]
+if DOMAINE_PUBLIC:
+    ALLOWED_HOSTS.append(DOMAINE_PUBLIC)
+
+CSRF_TRUSTED_ORIGINS = [o for o in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o]
+if DOMAINE_PUBLIC:
+    CSRF_TRUSTED_ORIGINS.append(f"https://{DOMAINE_PUBLIC}")
+
+# Dossier des données persistantes (fichiers déposés, journaux).
+# En local : la racine du projet ; en production : le volume monté (ex. /data).
+DATA_DIR = Path(os.getenv("DJANGO_DATA_DIR", BASE_DIR))
 
 
 # Applications
@@ -53,6 +71,7 @@ INSTALLED_APPS = ["daphne"] + DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # sert les fichiers statiques en production
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -100,12 +119,13 @@ else:
 
 
 # Base de données
+# SQLite en local ; PostgreSQL dès que DATABASE_URL est défini (fourni par Railway).
+# Connexions non persistantes (conn_max_age=0) : recommandé avec un serveur ASGI.
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    "default": dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}", conn_max_age=0, conn_health_checks=True,
+    )
 }
 
 
@@ -144,23 +164,50 @@ STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# En production, fichiers compressés et versionnés (collectstatic) ; en local, comportement par défaut
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage" if DEBUG
+        else "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
 MEDIA_URL = "media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT = DATA_DIR / "media"
 
 # Fichiers privés (pièces jointes de la messagerie) : jamais servis directement,
 # uniquement via une vue qui vérifie les droits
-PRIVATE_MEDIA_ROOT = BASE_DIR / "private_media"
+PRIVATE_MEDIA_ROOT = DATA_DIR / "private_media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-# E-mails (affichés dans la console en développement)
+# E-mails (affichés dans la console en développement ; SMTP en production si EMAIL_HOST est défini)
 
 EMAIL_BACKEND = os.getenv("DJANGO_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
 DEFAULT_FROM_EMAIL = os.getenv("DJANGO_DEFAULT_FROM_EMAIL", "SkillForge <noreply@skillforge.tn>")
+EMAIL_HOST = os.getenv("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
+EMAIL_TIMEOUT = 10
 
 # Adresse du site, utilisée pour les liens dans les e-mails de notification
-SITE_URL = os.getenv("DJANGO_SITE_URL", "http://127.0.0.1:8000")
+SITE_URL = os.getenv("DJANGO_SITE_URL") or (
+    f"https://{DOMAINE_PUBLIC}" if DOMAINE_PUBLIC else "http://127.0.0.1:8000")
+
+
+# Sécurité en production (HTTPS assuré par le proxy de Railway)
+
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    # Redirection HTTPS déjà faite par Railway ; HSTS inutile (et risqué) sur un domaine de démonstration
+    SILENCED_SYSTEM_CHECKS = ["security.W004", "security.W008"]
 
 
 # Messagerie : pièces jointes
@@ -190,8 +237,8 @@ MODERATION_TIMEOUT = max(10, int(os.getenv("MODERATION_TIMEOUT", "15")))  # seco
 
 TESTS_EN_COURS = len(sys.argv) > 1 and sys.argv[1] == "test"
 
-LOGS_DIR = BASE_DIR / "logs"
-LOGS_DIR.mkdir(exist_ok=True)
+LOGS_DIR = DATA_DIR / "logs"
+LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
 LOGGING = {
     "version": 1,
@@ -200,6 +247,7 @@ LOGGING = {
         "moderation": {"format": "{asctime} [Modération] {message}", "style": "{", "datefmt": "%d/%m %H:%M:%S"},
     },
     "handlers": {
+        "console": {"class": "logging.StreamHandler"},
         "console_moderation": {"class": "logging.StreamHandler", "formatter": "moderation"},
         "fichier_moderation": {
             "class": "logging.handlers.RotatingFileHandler",
@@ -210,6 +258,9 @@ LOGGING = {
             "formatter": "moderation",
         },
     },
+    # Avertissements et erreurs (ex. erreur 500) visibles dans les journaux de Railway
+    # (en local, Django les affiche déjà lui-même)
+    "root": {"handlers": [] if DEBUG else ["console"], "level": "WARNING"},
     "loggers": {
         "apps.notifications.moderation": {
             # Pendant les tests, rien n'est affiché ni écrit (le journal reste une preuve fiable)
