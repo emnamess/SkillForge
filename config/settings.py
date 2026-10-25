@@ -23,8 +23,9 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", CLE_DEV)
 if not DEBUG and SECRET_KEY in ("", CLE_DEV, "change-me"):
     raise ImproperlyConfigured("DJANGO_SECRET_KEY doit être défini en production (DJANGO_DEBUG=False).")
 
-# Domaine public fourni automatiquement par Railway (ex. skillforge-production.up.railway.app)
-DOMAINE_PUBLIC = os.getenv("RAILWAY_PUBLIC_DOMAIN", "")
+# Domaine public fourni automatiquement par l'hébergeur
+# (Render : skillforge.onrender.com, Railway : skillforge-production.up.railway.app)
+DOMAINE_PUBLIC = os.getenv("RENDER_EXTERNAL_HOSTNAME") or os.getenv("RAILWAY_PUBLIC_DOMAIN", "")
 
 ALLOWED_HOSTS = [h for h in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h]
 if DOMAINE_PUBLIC:
