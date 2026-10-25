@@ -4,21 +4,25 @@ Plateforme e-learning : des modules pas à pas, des quiz corrigés par l'IA et d
 
 Développé avec **Django 5.2** selon l'architecture **MVT** (Model, View, Template).
 
-## Équipe et modules
+## Modules
 
-| Membre | Module | App Django |
-|---|---|---|
-| Emna Messaoudi | Notifications et messagerie | `apps/notifications` |
-| Emna Ben Miled | Cours et modules | `apps/courses` |
-| Mariem Ferjani | Quiz et correction IA | `apps/quizzes` |
-| Saif Tannoubi | Mentorat et séances | `apps/mentoring` |
-| Mohamed Karim Kebaili | Certificats et statistiques | `apps/certificates` |
-| Emna Messaoudi | Utilisateurs et rôles | `apps/accounts` |
+| Module | App Django |
+|---|---|
+| Utilisateurs et rôles | `apps/accounts` |
+| Cours et modules | `apps/courses` |
+| Quiz et correction IA | `apps/quizzes` |
+| Mentorat et séances | `apps/mentoring` |
+| Certificats et statistiques | `apps/certificates` |
+| Notifications et messagerie | `apps/notifications` |
+| Espace carrière | `apps/careers` |
+
+L'équipe, les comptes de démo et l'accès au site en ligne sont décrits dans **`COMPTES.md`**,
+un fichier local non versionné (à demander à l'équipe).
 
 ## Installation (première fois)
 
 ```bash
-git clone https://github.com/emnamess/SkillForge.git
+git clone <adresse-du-dépôt>
 cd SkillForge
 python run.py setup        # crée le venv, installe les dépendances, génère .env, crée la base
 python run.py superuser    # crée votre compte administrateur
@@ -62,21 +66,11 @@ Il utilise automatiquement le Python du `venv` : **pas besoin d'activer l'enviro
 
 ### Comptes de démo
 
-`python run.py demo` crée des comptes prêts à l'emploi pour tester tous les rôles.
-On peut se connecter avec l'e-mail **ou** le nom d'utilisateur.
+`python run.py demo` crée des comptes prêts à l'emploi pour tester tous les rôles (administrateur, formateurs,
+apprenants) ; `python run.py carriere` ajoute les recruteurs. On peut se connecter avec l'e-mail **ou** le nom
+d'utilisateur. La liste des comptes et le mot de passe sont dans `COMPTES.md` (local, non versionné).
 
-| Nom | E-mail | Nom d'utilisateur | Mot de passe | Rôle |
-|---|---|---|---|---|
-| Nadia Admin | `admin@demo.skillforge.tn` | `demo_admin` | `SkillForge2026!` | Administrateur (accès à `/admin/`) |
-| Karim Mansour | `karim@demo.skillforge.tn` | `demo_karim` | `SkillForge2026!` | Formateur · Modélisation UML |
-| Leïla Trabelsi | `leila@demo.skillforge.tn` | `demo_leila` | `SkillForge2026!` | Formateur · Bases de données |
-| Sami Rekik | `sami@demo.skillforge.tn` | `demo_sami` | `SkillForge2026!` | Formateur **en attente de validation** |
-| Yasmine Ben Ali | `yasmine@demo.skillforge.tn` | `demo_yasmine` | `SkillForge2026!` | Apprenante |
-| Amine Mejri | `amine@demo.skillforge.tn` | `demo_amine` | `SkillForge2026!` | Apprenant |
-| Sarra Khelifi | `sarra@demo.skillforge.tn` | `demo_sarra` | `SkillForge2026!` | Apprenante |
-
-> Ces comptes n'existent que sur votre machine, après `python run.py demo` (la commande refuse de tourner
-> hors développement). Ne réutilisez jamais ce mot de passe pour de vrais comptes.
+> La commande refuse de tourner hors développement. Ne réutilisez jamais le mot de passe de démo pour de vrais comptes.
 
 Ils arrivent avec des conversations, des notifications, un message signalé à modérer et un rappel de séance
 qui arrive 2 minutes après la création (si `python run.py dev` tourne). Pour tester le temps réel, ouvrir deux

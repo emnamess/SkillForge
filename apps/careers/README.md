@@ -93,16 +93,8 @@ python run.py carriere --reinitialiser  # supprime puis recrée la démo Carriè
 python run.py test apps.careers         # tests de l'application
 ```
 
-Les comptes de démo utilisent le domaine `@demo-carriere.skillforge.tn` et le mot de passe `SkillForge2026!`.
-
-| E-mail | Rôle |
-|---|---|
-| `datavision@demo-carriere.skillforge.tn` | Recruteur · DataVision (validée) |
-| `codenest@demo-carriere.skillforge.tn` | Recruteur · CodeNest (validée) |
-| `atlas@demo-carriere.skillforge.tn` | Recruteur · Atlas Recrutement (en attente) |
-| `ines@demo-carriere.skillforge.tn` | Apprenante · 93 % sur le stage PFE data |
-| `walid@demo-carriere.skillforge.tn` | Apprenant · 62 % |
-| `rania@demo-carriere.skillforge.tn` | Apprenante · 31 % |
+Les comptes de démo (3 recruteurs, 3 apprenants, domaine `@demo-carriere.skillforge.tn`) et leur mot de passe
+sont listés dans `COMPTES.md`, à la racine du projet (fichier local, non versionné).
 
 Pour l'administration, utiliser un superutilisateur (`python run.py superuser`) ou `demo_admin` (`python run.py demo`).
 
