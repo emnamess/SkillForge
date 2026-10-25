@@ -1,17 +1,256 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Accueil{% endblock %}
 
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/accueil.css' %}">{% endblock %}
+
 {% block content %}
-<section class="hero">
+<section class="hero accueil-hero">
     <div class="hero-text">
         <span class="badge badge-orange">Quiz corrigés par l'IA</span>
-        <h1>Apprenez à votre rythme, accompagné par l'IA et de vrais formateurs.</h1>
-        <p>Des modules pas à pas, des quiz corrigés instantanément et des séances de mentorat en direct.</p>
+        {% if user.is_authenticated %}
+            <h1>Bon retour, {{ user.first_name|default:user.username }} !</h1>
+            <p>Reprenez vos cours là où vous les avez laissés, ou découvrez ce qui a été publié depuis votre dernière visite.</p>
+            <div class="accueil-cta">
+                <a href="{% url 'accounts:dashboard' %}" class="btn btn-orange">Accéder à mon espace</a>
+                <a href="{% url 'courses:index' %}" class="btn btn-ghost">Voir le catalogue</a>
+            </div>
+        {% else %}
+            <h1>Apprenez à votre rythme, accompagné par l'IA et de vrais formateurs.</h1>
+            <p>Des modules pas à pas, des quiz corrigés instantanément et des séances de mentorat en direct.</p>
+            <div class="accueil-cta">
+                <a href="{% url 'accounts:inscription' %}" class="btn btn-orange">Commencer gratuitement</a>
+                <a href="{% url 'courses:index' %}" class="btn btn-ghost">Explorer le catalogue</a>
+            </div>
+        {% endif %}
     </div>
     <form class="hero-search" action="{% url 'courses:index' %}" method="get">
         <label for="q">Que voulez-vous apprendre ?</label>
         <input id="q" type="search" name="q" placeholder="Ex. SQL, UML, pipelines de données...">
+        <div class="accueil-tags">
+            <a href="{% url 'courses:index' %}?q=SQL">SQL</a>
+            <a href="{% url 'courses:index' %}?q=Python">Python</a>
+            <a href="{% url 'courses:index' %}?q=UML">UML</a>
+            <a href="{% url 'courses:index' %}?q=Django">Django</a>
+            <a href="{% url 'courses:index' %}?q=agiles">Agile</a>
+        </div>
     </form>
 </section>
+
+<section class="accueil-chiffres">
+    <div><strong>{{ chiffres.cours }}</strong><span>cours publiés</span></div>
+    <div><strong>{{ chiffres.apprenants }}</strong><span>apprenants</span></div>
+    <div><strong>{{ chiffres.certificats }}</strong><span>certificats délivrés</span></div>
+    <div><strong>{{ chiffres.offres }}</strong><span>offres de stage et d'emploi</span></div>
+</section>
+
+<div class="accueil">
+
+    <section class="accueil-section">
+        <header class="accueil-titre">
+            <span class="badge badge-indigo">Tout au même endroit</span>
+            <h2>De la première leçon au premier emploi</h2>
+        </header>
+        <div class="accueil-modules">
+            <a href="{% url 'courses:index' %}" class="card module-carte">
+                <span class="module-icone icone-indigo">
+                    <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14z"/><path d="M8 7h8M8 11h6"/></svg>
+                </span>
+                <h3>Cours et modules</h3>
+                <p>Des parcours découpés en modules courts, avec votre progression enregistrée à chaque étape.</p>
+                <span class="module-lien">Voir le catalogue →</span>
+            </a>
+            <a href="{% url 'quizzes:index' %}" class="card module-carte">
+                <span class="module-icone icone-orange">
+                    <svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg>
+                </span>
+                <h3>Quiz corrigés par l'IA</h3>
+                <p>QCM, vrai/faux et réponses libres corrigées par Gemini, avec une explication pour chaque erreur.</p>
+                <span class="module-lien">Tester mes connaissances →</span>
+            </a>
+            <a href="{% url 'mentoring:index' %}" class="card module-carte">
+                <span class="module-icone icone-green">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </span>
+                <h3>Mentorat en direct</h3>
+                <p>Réservez une séance avec un formateur, recevez un rappel 24 h et 15 min avant.</p>
+                <span class="module-lien">Trouver un mentor →</span>
+            </a>
+            <a href="{% url 'certificates:verifier' %}" class="card module-carte">
+                <span class="module-icone icone-rust">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M8.2 13.4L7 22l5-3 5 3-1.2-8.6"/></svg>
+                </span>
+                <h3>Certificats vérifiables</h3>
+                <p>Chaque certificat porte un code et un QR code qu'un recruteur peut vérifier en un clic.</p>
+                <span class="module-lien">Vérifier un certificat →</span>
+            </a>
+            <a href="{% url 'notifications:messagerie' %}" class="card module-carte">
+                <span class="module-icone icone-pink">
+                    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </span>
+                <h3>Messagerie en temps réel</h3>
+                <p>Posez vos questions aux formateurs, partagez des fichiers. Une IA veille au respect de chacun.</p>
+                <span class="module-lien">Ouvrir la messagerie →</span>
+            </a>
+            <a href="{% url 'careers:offres' %}" class="card module-carte">
+                <span class="module-icone icone-navy">
+                    <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                </span>
+                <h3>Espace carrière</h3>
+                <p>Des offres de stage et d'emploi, avec votre score de compatibilité calculé à partir de vos compétences.</p>
+                <span class="module-lien">Voir les offres →</span>
+            </a>
+        </div>
+    </section>
+
+    {% if cours_populaires %}
+    <section class="accueil-section">
+        <header class="accueil-titre accueil-titre-ligne">
+            <div>
+                <span class="badge badge-green">Les plus suivis</span>
+                <h2>Cours populaires</h2>
+            </div>
+            <a href="{% url 'courses:index' %}" class="btn btn-outline">Tout le catalogue</a>
+        </header>
+        <div class="accueil-cours">
+            {% for cours in cours_populaires %}
+            <a href="{% url 'courses:detail' cours.pk %}" class="card cours-carte">
+                <div class="cours-bandeau bandeau-{% cycle 'indigo' 'orange' 'green' 'rust' 'pink' 'navy' %}">
+                    <span>{{ cours.titre|slice:":1" }}</span>
+                </div>
+                <div class="cours-corps">
+                    <h3>{{ cours.titre }}</h3>
+                    <p>{{ cours.description|truncatechars:95 }}</p>
+                    <div class="cours-meta">
+                        <span>{{ cours.nb_modules }} module{{ cours.nb_modules|pluralize }}</span>
+                        <span>{{ cours.nb_inscrits }} inscrit{{ cours.nb_inscrits|pluralize }}</span>
+                    </div>
+                    <small>Par {{ cours.formateur.get_full_name|default:cours.formateur.username }}</small>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="accueil-section">
+        <header class="accueil-titre">
+            <span class="badge badge-orange">Simple et rapide</span>
+            <h2>Comment ça marche ?</h2>
+        </header>
+        <ol class="accueil-etapes">
+            <li><strong>Inscrivez-vous</strong><span>Créez votre compte apprenant en moins d'une minute.</span></li>
+            <li><strong>Suivez les modules</strong><span>Avancez à votre rythme, votre progression est sauvegardée.</span></li>
+            <li><strong>Passez les quiz</strong><span>L'IA corrige vos réponses et vous explique vos erreurs.</span></li>
+            <li><strong>Obtenez votre certificat</strong><span>Délivré automatiquement à 100 % du cours et 70 % au quiz.</span></li>
+        </ol>
+    </section>
+
+    {% if formateurs or offres_recentes %}
+    <section class="accueil-section accueil-duo">
+        {% if formateurs %}
+        <div>
+            <header class="accueil-titre">
+                <span class="badge badge-indigo">Ils vous accompagnent</span>
+                <h2>Nos formateurs</h2>
+            </header>
+            <ul class="accueil-liste">
+                {% for formateur in formateurs %}
+                <li class="card formateur-carte">
+                    <span class="avatar">{{ formateur.first_name|slice:":1" }}{{ formateur.last_name|slice:":1" }}</span>
+                    <div>
+                        <strong>{{ formateur.get_full_name|default:formateur.username }}</strong>
+                        <small>{{ formateur.specialite|default:"Formateur SkillForge" }} · {{ formateur.nb_cours }} cours</small>
+                    </div>
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'notifications:nouvelle_conversation' %}?a={{ formateur.pk }}" class="btn btn-sm btn-outline">Écrire</a>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        {% if offres_recentes %}
+        <div>
+            <header class="accueil-titre">
+                <span class="badge badge-green">Recrutent en ce moment</span>
+                <h2>Dernières offres</h2>
+            </header>
+            <ul class="accueil-liste">
+                {% for offre in offres_recentes %}
+                <li>
+                    <a href="{{ offre.get_absolute_url }}" class="card offre-carte">
+                        <div>
+                            <strong>{{ offre.titre }}</strong>
+                            <small>{{ offre.entreprise.nom }} · {{ offre.ville }}</small>
+                        </div>
+                        <span class="badge badge-muted">{{ offre.get_type_contrat_display }}</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <section class="accueil-section">
+        <header class="accueil-titre">
+            <span class="badge badge-rust">Une place pour chacun</span>
+            <h2>Rejoignez SkillForge</h2>
+        </header>
+        <div class="accueil-roles">
+            <div class="card role-carte">
+                <h3>Apprenant</h3>
+                <p>Suivez des cours, passez des quiz, obtenez des certificats et postulez aux offres.</p>
+                <a href="{% url 'accounts:inscription' %}" class="btn btn-primary">Je veux apprendre</a>
+            </div>
+            <div class="card role-carte">
+                <h3>Formateur</h3>
+                <p>Publiez vos cours, générez des quiz avec l'IA et accompagnez vos apprenants en mentorat.</p>
+                <a href="{% url 'accounts:inscription' %}" class="btn btn-outline">Je veux enseigner</a>
+            </div>
+            <div class="card role-carte">
+                <h3>Recruteur</h3>
+                <p>Publiez vos offres et trouvez des profils dont les compétences sont certifiées.</p>
+                <a href="{% url 'careers:inscription_recruteur' %}" class="btn btn-outline">Je recrute</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="accueil-verifier">
+        <div>
+            <h2>Un certificat à vérifier ?</h2>
+            <p>Saisissez le code imprimé sur le certificat pour confirmer qu'il est authentique.</p>
+        </div>
+        <form action="{% url 'certificates:verifier' %}" method="get">
+            <label for="code-certificat" class="sr-only">Code de vérification</label>
+            <input id="code-certificat" name="code" placeholder="SF-XXXX-XXXX" autocomplete="off" required>
+            <button class="btn btn-orange">Vérifier</button>
+        </form>
+    </section>
+</div>
+
+<footer class="accueil-pied">
+    <div class="accueil-pied-marque">
+        <span class="brand-logo">SF</span>
+        <div>
+            <strong>SkillForge</strong>
+            <small>Plateforme e-learning · Projet Django MVT</small>
+        </div>
+    </div>
+    <nav>
+        <a href="{% url 'courses:index' %}">Catalogue</a>
+        <a href="{% url 'mentoring:index' %}">Mentorat</a>
+        <a href="{% url 'careers:offres' %}">Offres</a>
+        <a href="{% url 'certificates:verifier' %}">Vérifier un certificat</a>
+        {% if user.is_authenticated %}
+            <a href="{% url 'accounts:dashboard' %}">Mon espace</a>
+        {% else %}
+            <a href="{% url 'accounts:login' %}">Se connecter</a>
+        {% endif %}
+    </nav>
+    <small>© {% now "Y" %} SkillForge</small>
+</footer>
 {% endblock %}
