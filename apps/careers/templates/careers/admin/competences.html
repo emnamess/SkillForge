@@ -1,0 +1,48 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Référentiel de compétences{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/careers.css' %}">{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Référentiel de compétences</h1>
+<p class="page-subtitle">Les alias (synonymes) servent à repérer les compétences dans les CV.</p>
+{% include "careers/admin/onglets.html" %}
+
+<div class="grid-2-1">
+    <div>
+        <form method="get" class="card filtres">
+            <label class="sr-only" for="q">Recherche</label>
+            <input type="search" name="q" id="q" value="{{ q }}" placeholder="Nom ou alias...">
+            <button type="submit" class="btn btn-primary">Rechercher</button>
+        </form>
+        <div class="card table-card">
+            <table class="table">
+                <thead><tr><th>Compétence</th><th>Catégorie</th><th>Offres</th><th>Apprenants</th><th class="text-right">Actions</th></tr></thead>
+                <tbody>
+                {% for c in page %}
+                    <tr>
+                        <td><strong>{{ c.nom }}</strong>{% if c.alias %}<br><small class="muted">{{ c.alias|truncatechars:70 }}</small>{% endif %}</td>
+                        <td><span class="badge badge-indigo">{{ c.get_categorie_display }}</span></td>
+                        <td>{{ c.nb_offres }}</td>
+                        <td>{{ c.nb_apprenants }}</td>
+                        <td class="actions"><a href="{% url 'careers:admin_competence_modifier' c.pk %}" class="btn btn-sm btn-outline">Modifier</a></td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="5" class="empty">Aucune compétence. Lancez <code>python manage.py seed_competences</code>.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% include "careers/partials/pagination.html" %}
+    </div>
+    <form method="post" class="form card" novalidate>
+        {% csrf_token %}
+        <h2>Nouvelle compétence</h2>
+        {% include "partials/form_field.html" with field=form.nom %}
+        {% include "partials/form_field.html" with field=form.categorie %}
+        {% include "partials/form_field.html" with field=form.alias %}
+        <button type="submit" class="btn btn-primary btn-block">Ajouter</button>
+    </form>
+</div>
+{% endblock %}

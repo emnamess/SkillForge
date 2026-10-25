@@ -9,6 +9,9 @@ daphne>=4.1
 # Modération IA (Google Gemini)
 google-genai>=1.0
 
+# Espace Carrière : lecture du texte des CV (PDF)
+pypdf>=5.0
+
 # Tests : rapport de couverture (python run.py couverture)
 coverage>=7.6
 

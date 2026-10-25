@@ -1,0 +1,27 @@
+{# Usage : {% include "careers/partials/carte_offre.html" with offre=offre avec_score=True %} #}
+<a href="{{ offre.get_absolute_url }}" class="card carte-offre">
+    <div class="carte-offre-entete">
+        <div>
+            <h3>{{ offre.titre }}</h3>
+            <p class="entreprise">{{ offre.entreprise }} · {{ offre.ville }}</p>
+        </div>
+        {% if avec_score %}{% include "careers/partials/score.html" with resultat=offre.compatibilite %}{% endif %}
+    </div>
+    <div class="badges">
+        <span class="badge badge-indigo">{{ offre.get_type_contrat_display }}</span>
+        <span class="badge badge-muted">{{ offre.get_mode_travail_display }}</span>
+        {% if offre.remuneration %}<span class="badge badge-green">{{ offre.remuneration }}</span>{% endif %}
+    </div>
+    {% with exigences=offre.competences_requises.all %}
+        {% if exigences %}
+        <ul class="competences-tags">
+            {% for e in exigences|slice:":5" %}<li{% if e.obligatoire %} class="obligatoire"{% endif %}>{{ e.competence }}</li>{% endfor %}
+            {% if exigences|length > 5 %}<li>+{{ exigences|length|add:"-5" }}</li>{% endif %}
+        </ul>
+        {% endif %}
+    {% endwith %}
+    <div class="carte-offre-pied">
+        <span>{% if offre.date_publication %}Publiée le {{ offre.date_publication|date:"d/m/Y" }}{% endif %}</span>
+        <span>{% if offre.date_limite %}Jusqu'au {{ offre.date_limite|date:"d/m/Y" }}{% endif %}</span>
+    </div>
+</a>

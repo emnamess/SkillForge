@@ -1,0 +1,47 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Candidature · {{ candidature.offre.titre }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/careers.css' %}">{% endblock %}
+
+{% block content %}
+<a href="{% url 'careers:mes_candidatures' %}" class="back-link">← Mes candidatures</a>
+<div class="grid-2-1">
+    <div>
+        <article class="card">
+            <div class="candidature-entete">
+                <div>
+                    <h1 class="page-title">{{ candidature.offre.titre }}</h1>
+                    <p class="muted sans-marge">{{ candidature.offre.entreprise }} · envoyée le {{ candidature.date_creation|date:"d/m/Y" }}</p>
+                </div>
+                {% include "careers/partials/statut.html" %}
+            </div>
+            {% if candidature.statut == "entretien" and candidature.date_entretien %}
+                <div class="entretien-encart">
+                    <strong>Entretien le {{ candidature.date_entretien|date:"l j F Y à H:i" }}</strong><br>
+                    {{ candidature.lieu_ou_lien_entretien|urlize }}
+                </div>
+            {% endif %}
+            {% if candidature.message_recruteur %}<p><strong>Message du recruteur :</strong> {{ candidature.message_recruteur }}</p>{% endif %}
+            <h2 class="avec-marge">Suivi</h2>
+            {% include "careers/partials/frise.html" with historique=historique %}
+        </article>
+    </div>
+    <aside class="colonne-laterale">
+        <div class="card">
+            <h2>Ma candidature</h2>
+            {% if candidature.score_au_depot is not None %}<p>Compatibilité au dépôt : <strong>{{ candidature.score_au_depot }} %</strong></p>{% endif %}
+            {% if candidature.cv_depose %}<p><a href="{% url 'careers:cv_candidature' candidature.pk %}" target="_blank" rel="noopener">CV envoyé</a></p>{% endif %}
+            {% if candidature.lettre_motivation %}<p class="description">{{ candidature.lettre_motivation }}</p>{% endif %}
+            <a href="{{ candidature.offre.get_absolute_url }}" class="btn btn-outline btn-block">Voir l'offre</a>
+            {% if candidature.est_active %}
+                <form method="post" action="{% url 'careers:retirer_candidature' candidature.pk %}" class="avec-marge"
+                      onsubmit="return confirm('Retirer cette candidature ? Cette action est définitive.');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline btn-block">Retirer ma candidature</button>
+                </form>
+            {% endif %}
+        </div>
+    </aside>
+</div>
+{% endblock %}

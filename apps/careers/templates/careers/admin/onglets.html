@@ -1,0 +1,8 @@
+{% with page=request.resolver_match.url_name %}
+<div class="onglets">
+    <a href="{% url 'careers:admin_statistiques' %}" class="onglet{% if page == 'admin_statistiques' %} actif{% endif %}">Statistiques</a>
+    <a href="{% url 'careers:admin_entreprises' %}" class="onglet{% if page == 'admin_entreprises' %} actif{% endif %}">Entreprises</a>
+    <a href="{% url 'careers:admin_signalements' %}" class="onglet{% if page == 'admin_signalements' %} actif{% endif %}">Signalements</a>
+    <a href="{% url 'careers:admin_competences' %}" class="onglet{% if page == 'admin_competences' or page == 'admin_competence_modifier' %} actif{% endif %}">Compétences</a>
+</div>
+{% endwith %}

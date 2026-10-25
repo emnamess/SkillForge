@@ -1,0 +1,47 @@
+{% extends "base_app.html" %}
+{% load static humanize %}
+
+{% block title %}Signalements d'offres{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/careers.css' %}">{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Signalements d'offres</h1>
+<p class="page-subtitle">Offres signalées par les apprenants : suspendez-les ou classez le signalement sans suite.</p>
+{% include "careers/admin/onglets.html" %}
+
+<div class="onglets">
+    <a href="?filtre=a-traiter" class="onglet{% if filtre == 'a-traiter' %} actif{% endif %}">À traiter</a>
+    <a href="?filtre=traites" class="onglet{% if filtre == 'traites' %} actif{% endif %}">Traités</a>
+    <a href="?filtre=tous" class="onglet{% if filtre == 'tous' %} actif{% endif %}">Tous</a>
+</div>
+
+<div class="candidatures">
+    {% for s in page %}
+        <article class="card">
+            <div class="candidature-entete">
+                <div>
+                    <h3><a href="{{ s.offre.get_absolute_url }}">{{ s.offre.titre }}</a></h3>
+                    <p class="muted sans-marge">{{ s.offre.entreprise }} · signalée par {{ s.auteur }} {{ s.date_creation|naturaltime }}</p>
+                </div>
+                <div class="badges">
+                    <span class="badge badge-rust">{{ s.get_motif_display }}</span>
+                    <span class="badge badge-muted">Offre {{ s.offre.get_statut_effectif_display|lower }}</span>
+                </div>
+            </div>
+            {% if s.details %}<p class="description">{{ s.details }}</p>{% endif %}
+            {% if s.traite %}
+                <p class="muted">{{ s.get_decision_display }} · par {{ s.traite_par|default:"un administrateur" }} le {{ s.date_traitement|date:"d/m/Y" }}</p>
+            {% else %}
+                <form method="post" action="{% url 'careers:admin_traiter_signalement' s.pk %}" class="actions">
+                    {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button name="decision" value="suspendue" class="btn btn-sm btn-primary">Suspendre l'offre</button>
+                    <button name="decision" value="classee" class="btn btn-sm btn-outline">Classer sans suite</button>
+                </form>
+            {% endif %}
+        </article>
+    {% empty %}
+        <div class="card muted">Aucun signalement.</div>
+    {% endfor %}
+</div>
+{% include "careers/partials/pagination.html" %}
+{% endblock %}
