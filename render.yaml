@@ -1,0 +1,45 @@
+# Blueprint Render : site + PostgreSQL + Redis, offre gratuite (voir README, « Déploiement »)
+# Render → New → Blueprint → choisir ce dépôt : tout est créé en une fois.
+
+services:
+  - type: web
+    name: skillforge
+    runtime: python
+    plan: free
+    region: frankfurt
+    buildCommand: pip install -r requirements.txt
+    startCommand: python run.py production
+    envVars:
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: skillforge-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: skillforge-redis
+          property: connectionString
+      # Pas de service séparé sur l'offre gratuite : les rappels tournent avec le site
+      - key: SKILLFORGE_RAPPELS_INTEGRES
+        value: "True"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash
+      - key: GEMINI_REFLEXION
+        value: minimal
+
+  - type: keyvalue
+    name: skillforge-redis
+    plan: free
+    region: frankfurt
+    ipAllowList: []  # accessible uniquement depuis les services Render
+
+databases:
+  - name: skillforge-db
+    plan: free
+    region: frankfurt

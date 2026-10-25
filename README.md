@@ -58,7 +58,7 @@ Il utilise automatiquement le Python du `venv` : **pas besoin d'activer l'enviro
 | `python run.py shell` | Ouvre un shell Python avec Django chargé |
 | `python run.py rappels` | Envoie les rappels de séances dus |
 | `python run.py clean` | Supprime les dossiers `__pycache__` |
-| `python run.py production` | Démarrage sur le serveur (voir [Déploiement](#déploiement-railway)) — pas en local |
+| `python run.py production` | Démarrage sur le serveur (voir [Déploiement](#déploiement-render)) — pas en local |
 
 ### Comptes de démo
 
@@ -294,62 +294,53 @@ ait assez de données ; à remplacer par les vraies données quand le module Cou
 python run.py couverture apps.certificates   # tests + rapport dans le terminal et dans htmlcov/index.html
 ```
 
-## Déploiement (Railway)
+## Déploiement (Render)
 
-SkillForge est hébergé sur [Railway](https://railway.com), qui fait tourner le projet comme en local :
-Daphne (HTTP + WebSockets), un processus pour les rappels, PostgreSQL, Redis et un disque pour les fichiers déposés.
+SkillForge est hébergé sur [Render](https://render.com) avec l'offre gratuite. Le fichier `render.yaml` (« Blueprint »)
+décrit tout : le site (Daphne : HTTP + WebSockets, rappels de séances inclus), PostgreSQL et Redis.
 **En local, rien ne change** : sans ces variables, le projet utilise SQLite et `python run.py dev`.
-
-### Architecture
-
-| Service Railway | Rôle | Variables propres |
-|---|---|---|
-| `web` (dépôt GitHub) | Site + WebSockets ; applique les migrations à chaque démarrage | `SKILLFORGE_PROCESSUS=web`, volume monté sur `/data` |
-| `rappels` (même dépôt) | Envoie les rappels de séances chaque minute | `SKILLFORGE_PROCESSUS=rappels` |
-| `Postgres` | Base de données | — |
-| `Redis` | Relie les deux processus : un rappel envoyé par `rappels` s'affiche en direct dans le navigateur | — |
-
-Les deux services utilisent `railway.json` (commande `python run.py production`) ; c'est `SKILLFORGE_PROCESSUS` qui choisit le rôle.
 
 ### Mise en place (une fois)
 
-1. Sur railway.com : **New Project → Deploy from GitHub repo → SkillForge**. Ce premier service sera `web`.
-2. Dans le projet : **+ Create → Database → PostgreSQL**, puis **+ Create → Database → Redis**.
-3. Service `web` → **Settings → Networking → Generate Domain** (adresse publique en `.up.railway.app`).
-4. Service `web` → clic droit → **Attach volume**, point de montage `/data`.
-5. Service `web` → **Variables** (la syntaxe `${{...}}` référence les autres services) :
-
-   | Variable | Valeur |
-   |---|---|
-   | `DJANGO_DEBUG` | `False` |
-   | `DJANGO_SECRET_KEY` | une longue clé aléatoire (`python -c "import secrets; print(secrets.token_urlsafe(50))"`) |
-   | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
-   | `REDIS_URL` | `${{Redis.REDIS_URL}}` |
-   | `DJANGO_DATA_DIR` | `/data` |
-   | `SKILLFORGE_PROCESSUS` | `web` |
-   | `GEMINI_API_KEY` | la clé Gemini (facultatif : sans clé, les règles locales modèrent) |
-   | `DJANGO_EMAIL_BACKEND`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | facultatif : sans eux, les e-mails s'affichent dans les journaux |
-
-   Le domaine public est détecté automatiquement (`RAILWAY_PUBLIC_DOMAIN`) : inutile de remplir
-   `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS` ou `DJANGO_SITE_URL`, sauf pour un nom de domaine personnalisé.
-6. Créer le service des rappels : **+ Create → GitHub Repo → SkillForge** (même dépôt), le renommer `rappels`,
-   et lui donner les mêmes variables **sauf** `SKILLFORGE_PROCESSUS=rappels` (pas de domaine ni de volume).
-7. Créer l'administrateur depuis la [CLI Railway](https://docs.railway.com/guides/cli) :
+1. Sur render.com : se connecter avec GitHub, puis **New → Blueprint** et choisir le dépôt **SkillForge**.
+2. Render lit `render.yaml` et propose de créer `skillforge` (site), `skillforge-db` (PostgreSQL) et `skillforge-redis`.
+   Il demande seulement `GEMINI_API_KEY` (facultatif : sans clé, les règles locales modèrent). Cliquer sur **Deploy Blueprint**.
+   La clé secrète Django est générée automatiquement ; le domaine `xxx.onrender.com` est détecté tout seul.
+3. Dans les journaux du service `skillforge` (**Logs**), attendre `Serveur Daphne (HTTP + WebSockets)`, puis ouvrir l'adresse du site.
+4. Créer l'administrateur **depuis son PC** (l'offre gratuite n'a pas de terminal) : `skillforge-db` → **Connect** →
+   copier l'**External Database URL**, puis :
    ```bash
-   railway link              # choisir le projet SkillForge
-   railway ssh --service web
-   python manage.py createsuperuser
+   # PowerShell : $env:DATABASE_URL="postgresql://..."   ·   bash : export DATABASE_URL="postgresql://..."
+   venv\Scripts\python manage.py createsuperuser
    ```
-   Données de démo (facultatif, mot de passe public : à ne faire que pour une démonstration) :
-   `python manage.py creer_demo --force` puis `python manage.py seed_carriere_demo --force`.
+   Même méthode pour les données de démo (facultatif, mot de passe public : seulement pour une démonstration) :
+   `venv\Scripts\python manage.py creer_demo --force` puis `venv\Scripts\python manage.py seed_carriere_demo --force`.
+   Fermer ensuite le terminal (ou supprimer `DATABASE_URL`) pour retravailler sur la base locale.
+
+### Limites de l'offre gratuite
+
+| Limite | Conséquence |
+|---|---|
+| Le site s'endort après 15 min sans visite | La première visite suivante prend environ une minute. Les rappels dus pendant le sommeil partent au réveil |
+| Pas de disque persistant | Les fichiers déposés (pièces jointes, CV, logos) et `logs/moderation.log` sont perdus à chaque redémarrage ou redéploiement |
+| PostgreSQL gratuit | Expire 30 jours après sa création (puis 14 jours de grâce) : recréer la base ou passer à une offre payante |
+| 512 Mo de mémoire | Suffisant : le site et les rappels utilisent environ 320 Mo |
+
+Pour lever ces limites : offre payante du service (avec un disque monté sur `/data` et `DJANGO_DATA_DIR=/data`),
+et un service séparé pour les rappels (`SKILLFORGE_PROCESSUS=rappels`, sans `SKILLFORGE_RAPPELS_INTEGRES`).
 
 ### Au quotidien
 
-- Chaque fusion dans `main` redéploie automatiquement les deux services ; les migrations sont appliquées au démarrage de `web`.
-- Journaux : service → **Deployments → View logs** (erreurs, décisions de modération, rappels envoyés).
-- Les fichiers déposés (pièces jointes, CV, logos) et `logs/moderation.log` sont sur le volume `/data` : ils survivent aux redéploiements.
-- Envoi d'e-mails : selon l'offre Railway, le SMTP sortant peut être bloqué ; dans ce cas, utiliser un service d'envoi
-  par API (Brevo, Resend…) ou laisser les e-mails dans les journaux. Les notifications dans le site fonctionnent dans tous les cas.
+- Chaque fusion dans `main` redéploie le site ; les migrations sont appliquées au démarrage.
+- Journaux : service `skillforge` → **Logs** (erreurs, décisions de modération, rappels envoyés).
+- E-mails : sans configuration, ils s'affichent dans les journaux. Pour de vrais envois, ajouter dans **Environment**
+  `DJANGO_EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`.
+
+### Autre hébergeur : Railway
+
+`railway.json` permet aussi un déploiement sur Railway (même commande `python run.py production`) : un service `web`
+(`SKILLFORGE_PROCESSUS=web`, volume sur `/data`, `DJANGO_DATA_DIR=/data`) et un service `rappels`
+(`SKILLFORGE_PROCESSUS=rappels`), avec PostgreSQL (`DATABASE_URL`) et Redis (`REDIS_URL`).
 
 ## Structure
 

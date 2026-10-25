@@ -130,7 +130,7 @@ def rappels(args):
 
 
 def production(args):
-    """Démarrage sur le serveur (Railway) : SKILLFORGE_PROCESSUS=web (défaut) ou rappels."""
+    """Démarrage sur le serveur (Render, Railway) : SKILLFORGE_PROCESSUS=web (défaut) ou rappels."""
     # Pas de venv sur le serveur : on utilise le Python courant
     python = sys.executable
     processus = os.getenv("SKILLFORGE_PROCESSUS", "web")
@@ -144,6 +144,10 @@ def production(args):
     executer(python, "manage.py", "migrate", "--noinput")
     info("Collecte des fichiers statiques")
     executer(python, "manage.py", "collectstatic", "--noinput", "--verbosity", "0")
+    if os.getenv("SKILLFORGE_RAPPELS_INTEGRES") == "True":
+        # Offre sans service séparé (Render gratuit) : les rappels tournent à côté du serveur web
+        info("Envoi des rappels de séances en arrière-plan (chaque minute)")
+        subprocess.Popen([python, "manage.py", "envoyer_rappels", "--boucle"], cwd=RACINE)
     port = os.getenv("PORT", "8000")
     info(f"Serveur Daphne (HTTP + WebSockets) sur le port {port}")
     # execv : Daphne remplace ce processus et reçoit directement les signaux d'arrêt de Railway
