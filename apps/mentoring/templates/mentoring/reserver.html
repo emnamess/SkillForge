@@ -1,0 +1,16 @@
+{% extends "base_app.html" %}
+{% block title %}Réserver une séance · Mentorat{% endblock %}
+{% block content %}
+<h1 class="page-title">Réserver avec {{ disponibilite.formateur.get_full_name|default:disponibilite.formateur.username }}</h1>
+<p class="page-subtitle">{{ disponibilite.debut|date:"l j F Y à H:i" }} – {{ disponibilite.fin|date:"H:i" }} · {{ disponibilite.duree_seance }} minutes</p>
+<form method="post" class="card">{% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert-error">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="form-field"><label for="id_debut">Créneau</label>
+        <select name="debut" id="id_debut" required>
+            {% for creneau in creneaux %}<option value="{{ creneau.isoformat }}">{{ creneau|date:"l j F à H:i" }}</option>{% empty %}<option value="">Aucun créneau libre</option>{% endfor %}
+        </select>
+    </div>
+    {% for field in form %}{% include "partials/form_field.html" with field=field %}{% endfor %}
+    <div class="page-head-actions"><button class="btn btn-primary" type="submit" {% if not creneaux %}disabled{% endif %}>Envoyer la demande</button><a class="btn btn-outline" href="{% url 'mentoring:index' %}">Retour</a></div>
+</form>
+{% endblock %}
