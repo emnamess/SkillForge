@@ -4,14 +4,43 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import DatabaseError, transaction
 from django.db.models import Q
 from django.utils import timezone
+from django.utils.formats import date_format
 
-from apps.notifications.services import annuler_rappels, planifier_rappels_seance
+from apps.notifications.models import Notification
+from apps.notifications.services import annuler_rappels, notifier, planifier_rappels_seance
 
 from .models import Disponibilite, SeanceMentorat
 
 
 class CreneauIndisponible(Exception):
     """Le créneau n'est plus réservable ou entre en conflit avec une séance."""
+
+
+def _quand(seance):
+    return date_format(timezone.localtime(seance.debut), "l j F à H\\hi")
+
+
+def _notifier_apres_commit(destinataires, titre, message, seance):
+    """La notification ne part que si la séance est bien enregistrée."""
+    transaction.on_commit(lambda: notifier(
+        destinataires, titre, message, type=Notification.Type.SEANCE, lien=seance.get_absolute_url(), email=True,
+    ))
+
+
+def _notifier_changement(seance, statut, par):
+    if statut == SeanceMentorat.Statut.CONFIRMEE:
+        _notifier_apres_commit(
+            seance.apprenant, "Séance de mentorat confirmée",
+            f"{seance.formateur} a confirmé votre séance « {seance.sujet} » du {_quand(seance)}.", seance,
+        )
+    elif statut == SeanceMentorat.Statut.ANNULEE:
+        # On prévient l'autre participant ; si un administrateur annule, les deux sont prévenus
+        destinataires = [u for u in (seance.apprenant, seance.formateur) if par is None or u.pk != par.pk]
+        auteur = f" par {par}" if par is not None else ""
+        _notifier_apres_commit(
+            destinataires, "Séance de mentorat annulée",
+            f"La séance « {seance.sujet} » du {_quand(seance)} a été annulée{auteur}.", seance,
+        )
 
 
 def _est_formateur_valide(user):
@@ -82,11 +111,21 @@ def reserver_seance(disponibilite_id, apprenant, debut, sujet, description="", *
             seance, [seance.apprenant, seance.formateur], seance.debut,
             titre=f"Séance de mentorat · {seance.sujet}", lien=seance.get_absolute_url(),
         )
+        _notifier_apres_commit(
+            apprenant, "Nouvelle séance de mentorat",
+            f"{formateur} a planifié une séance « {sujet} » avec vous le {_quand(seance)}.", seance,
+        )
+    else:
+        _notifier_apres_commit(
+            formateur, "Nouvelle demande de séance",
+            f"{apprenant} demande une séance « {sujet} » le {_quand(seance)}. Confirmez-la depuis la séance.", seance,
+        )
     return seance
 
 
 @transaction.atomic
-def changer_statut(seance, statut):
+def changer_statut(seance, statut, par=None):
+    """`par` : utilisateur à l'origine du changement, pour ne pas le notifier de sa propre action."""
     if statut not in SeanceMentorat.Statut.values:
         raise ValidationError("Statut de séance invalide.")
     if seance.statut in (SeanceMentorat.Statut.ANNULEE, SeanceMentorat.Statut.TERMINEE):
@@ -104,6 +143,7 @@ def changer_statut(seance, statut):
         )
     elif statut == SeanceMentorat.Statut.ANNULEE:
         annuler_rappels(seance)
+    _notifier_changement(seance, statut, par)
     return seance
 
 
