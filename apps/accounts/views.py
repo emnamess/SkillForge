@@ -12,7 +12,28 @@ from .models import User
 
 
 def home(request):
-    return render(request, "home.html")
+    """Page d'accueil publique : vitrine de chaque module avec des chiffres réels."""
+    from apps.careers.views import offres_ouvertes
+    from apps.certificates.models import Certificat
+    from apps.courses.models import Cours
+
+    cours_publies = Cours.objects.filter(est_publie=True)
+    offres = offres_ouvertes()
+    return render(request, "home.html", {
+        "chiffres": {
+            "cours": cours_publies.count(),
+            "apprenants": User.objects.filter(role=User.Role.APPRENANT, is_active=True).count(),
+            "certificats": Certificat.objects.filter(statut=Certificat.Statut.VALIDE).count(),
+            "offres": offres.count(),
+        },
+        "cours_populaires": cours_publies.select_related("formateur").annotate(
+            nb_inscrits=Count("inscriptions", distinct=True), nb_modules=Count("modules", distinct=True),
+        ).order_by("-nb_inscrits", "titre")[:6],
+        "formateurs": User.objects.filter(role=User.Role.FORMATEUR, est_valide=True, is_active=True).annotate(
+            nb_cours=Count("cours_crees", filter=Q(cours_crees__est_publie=True), distinct=True),
+        ).order_by("-nb_cours")[:3],
+        "offres_recentes": offres.order_by("-date_publication")[:3],
+    })
 
 
 def inscription(request):

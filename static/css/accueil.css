@@ -1,0 +1,170 @@
+/* ============ Page d'accueil (publique) ============ */
+
+.sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* ---------- Bandeau ---------- */
+
+.accueil-hero { position: relative; overflow: hidden; padding-top: 4.5rem; padding-bottom: 5.5rem; }
+.accueil-hero::before,
+.accueil-hero::after {
+    content: ""; position: absolute; border-radius: 50%; pointer-events: none;
+}
+.accueil-hero::before { width: 420px; height: 420px; right: -120px; top: -160px; background: rgba(85, 70, 192, 0.45); }
+.accueil-hero::after { width: 260px; height: 260px; left: 38%; bottom: -170px; background: rgba(240, 160, 40, 0.18); }
+.accueil-hero > * { position: relative; z-index: 1; }
+
+.accueil-cta { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 1.8rem; }
+.btn-orange:hover { background: #f5b245; }
+.btn-ghost { background: transparent; color: var(--white); border-color: rgba(255, 255, 255, 0.35); }
+.btn-ghost:hover { background: rgba(255, 255, 255, 0.08); }
+
+.hero-search {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: var(--radius);
+    padding: 1.4rem;
+}
+.accueil-tags { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.9rem; }
+.accueil-tags a {
+    padding: 0.25rem 0.7rem; border-radius: 999px; font-size: 0.82rem; font-weight: 500;
+    color: #d8d6f0; background: rgba(255, 255, 255, 0.08);
+}
+.accueil-tags a:hover { background: var(--orange); color: var(--navy-dark); }
+
+/* ---------- Chiffres ---------- */
+
+.accueil-chiffres {
+    position: relative; z-index: 2;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    max-width: 1080px; margin: -2.6rem auto 0;
+    background: var(--white); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: 0 12px 30px rgba(35, 31, 92, 0.08);
+}
+.accueil-chiffres div { display: flex; flex-direction: column; align-items: center; gap: 0.15rem; padding: 1.3rem 1rem; }
+.accueil-chiffres div + div { border-left: 1px solid var(--border); }
+.accueil-chiffres strong { font: 700 1.9rem var(--font-title); color: var(--indigo); }
+.accueil-chiffres span { color: var(--muted); font-size: 0.9rem; text-align: center; }
+
+/* ---------- Sections ---------- */
+
+.accueil { max-width: 1080px; margin: 0 auto; padding: 0 1.5rem; }
+.accueil-section { padding-top: 4rem; }
+.accueil-titre { margin-bottom: 1.6rem; }
+.accueil-titre h2 { margin: 0.6rem 0 0; font-size: 1.7rem; }
+.accueil-titre-ligne { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; }
+
+/* Modules de la plateforme */
+.accueil-modules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; }
+.module-carte { display: flex; flex-direction: column; color: var(--text); transition: transform .15s, box-shadow .15s, border-color .15s; }
+.module-carte:hover { transform: translateY(-3px); border-color: var(--indigo); box-shadow: 0 10px 24px rgba(35, 31, 92, 0.08); }
+.module-carte h3 { margin: 1rem 0 0.4rem; font-size: 1.05rem; }
+.module-carte p { margin: 0 0 1rem; color: var(--muted); font-size: 0.92rem; line-height: 1.5; flex: 1; }
+.module-lien { color: var(--indigo); font-weight: 600; font-size: 0.9rem; }
+
+.module-icone { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 10px; }
+.module-icone svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.icone-indigo { background: var(--indigo-soft); color: var(--indigo); }
+.icone-orange { background: var(--orange-soft); color: #b27412; }
+.icone-green { background: var(--green-soft); color: var(--green); }
+.icone-rust { background: var(--rust-soft); color: var(--rust); }
+.icone-pink { background: #fbe7ee; color: var(--pink); }
+.icone-navy { background: #e6e5f0; color: var(--navy); }
+
+/* Cours populaires */
+.accueil-cours { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; }
+.cours-carte { padding: 0; overflow: hidden; color: var(--text); display: flex; flex-direction: column; transition: transform .15s, box-shadow .15s; }
+.cours-carte:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(35, 31, 92, 0.08); }
+.cours-bandeau { display: flex; align-items: flex-end; height: 92px; padding: 0.8rem 1.2rem; }
+.cours-bandeau span { font: 700 2.6rem/1 var(--font-title); color: rgba(255, 255, 255, 0.9); }
+.bandeau-indigo { background: linear-gradient(135deg, var(--indigo), #7a6de0); }
+.bandeau-orange { background: linear-gradient(135deg, #e48f12, var(--orange)); }
+.bandeau-green { background: linear-gradient(135deg, var(--green), #2a9c7a); }
+.bandeau-rust { background: linear-gradient(135deg, var(--rust), #c4593a); }
+.bandeau-pink { background: linear-gradient(135deg, #b83d67, var(--pink)); }
+.bandeau-navy { background: linear-gradient(135deg, var(--navy-dark), var(--navy)); }
+.cours-corps { padding: 1.1rem 1.2rem 1.3rem; display: flex; flex-direction: column; flex: 1; }
+.cours-corps h3 { margin: 0 0 0.4rem; font-size: 1.05rem; }
+.cours-corps p { margin: 0 0 0.9rem; color: var(--muted); font-size: 0.9rem; line-height: 1.45; flex: 1; }
+.cours-meta { display: flex; gap: 0.5rem; margin-bottom: 0.6rem; }
+.cours-meta span { padding: 0.15rem 0.55rem; border-radius: 999px; background: var(--cream); font-size: 0.8rem; color: var(--navy); }
+.cours-corps small { color: var(--muted); }
+
+/* Étapes */
+.accueil-etapes { counter-reset: etape; list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2rem; }
+.accueil-etapes li { counter-increment: etape; display: flex; flex-direction: column; gap: 0.35rem; }
+.accueil-etapes li::before {
+    content: counter(etape);
+    display: grid; place-items: center; width: 40px; height: 40px; margin-bottom: 0.5rem;
+    border-radius: 50%; background: var(--navy); color: var(--white); font: 700 1rem var(--font-title);
+}
+.accueil-etapes strong { color: var(--navy); }
+.accueil-etapes span { color: var(--muted); font-size: 0.92rem; line-height: 1.45; }
+
+/* Formateurs et offres */
+.accueil-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+.accueil-liste { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.8rem; }
+.formateur-carte, .offre-carte { display: flex; align-items: center; gap: 0.9rem; padding: 1rem 1.2rem; }
+.formateur-carte > div, .offre-carte > div { flex: 1; min-width: 0; }
+.formateur-carte strong, .offre-carte strong { display: block; color: var(--navy); }
+.formateur-carte small, .offre-carte small { color: var(--muted); }
+.offre-carte { color: var(--text); }
+.offre-carte:hover { border-color: var(--indigo); }
+
+/* Rôles */
+.accueil-roles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; }
+.role-carte { display: flex; flex-direction: column; align-items: flex-start; }
+.role-carte h3 { margin: 0 0 0.4rem; }
+.role-carte p { margin: 0 0 1.2rem; color: var(--muted); line-height: 1.5; flex: 1; }
+
+/* Vérification de certificat */
+.accueil-verifier {
+    display: flex; align-items: center; justify-content: space-between; gap: 2rem;
+    margin-top: 4rem; padding: 2rem 2.2rem; border-radius: var(--radius);
+    background: var(--navy); color: #d8d6f0;
+}
+.accueil-verifier h2 { margin: 0 0 0.3rem; color: var(--white); font-size: 1.4rem; }
+.accueil-verifier p { margin: 0; }
+.accueil-verifier form { display: flex; gap: 0.6rem; flex: 0 0 auto; }
+.accueil-verifier input {
+    width: 200px; padding: 0.6rem 0.9rem; border: none; border-radius: 8px;
+    font: 600 0.95rem var(--font-body); letter-spacing: 0.04em; text-transform: uppercase;
+}
+
+/* Pied de page */
+.accueil-pied {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.2rem;
+    margin-top: 4rem; padding: 1.8rem 3rem; background: var(--white); border-top: 1px solid var(--border);
+}
+.accueil-pied-marque { display: flex; align-items: center; gap: 0.7rem; }
+.accueil-pied-marque strong { display: block; font-family: var(--font-title); color: var(--navy); }
+.accueil-pied-marque small, .accueil-pied > small { color: var(--muted); }
+.accueil-pied nav { display: flex; flex-wrap: wrap; gap: 1.4rem; }
+.accueil-pied nav a { color: var(--muted); font-weight: 500; }
+.accueil-pied nav a:hover { color: var(--indigo); }
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 960px) {
+    .accueil-modules, .accueil-cours, .accueil-roles { grid-template-columns: 1fr 1fr; }
+    .accueil-etapes { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 860px) {
+    .accueil-hero h1 { font-size: 1.9rem; }
+    .accueil { padding: 0 16px; }
+    .accueil-chiffres { grid-template-columns: 1fr 1fr; margin: -2.6rem 16px 0; }
+    .accueil-chiffres div:nth-child(3) { border-left: none; }
+    .accueil-chiffres div:nth-child(n+3) { border-top: 1px solid var(--border); }
+    .accueil-duo { grid-template-columns: 1fr; }
+    .accueil-verifier { flex-direction: column; align-items: stretch; padding: 1.6rem; }
+    .accueil-verifier input { flex: 1; width: auto; min-width: 0; }
+    .accueil-pied { padding: 1.6rem 16px; }
+}
+
+@media (max-width: 600px) {
+    .accueil-modules, .accueil-cours, .accueil-roles, .accueil-etapes { grid-template-columns: 1fr; }
+    .accueil-titre-ligne { flex-direction: column; align-items: flex-start; }
+}
