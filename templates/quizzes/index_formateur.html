@@ -1,0 +1,94 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Mes quiz{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/quizzes.css' %}">
+{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+    <div>
+        <h1 class="page-title">Mes quiz</h1>
+        <p class="page-subtitle">Gérez vos quiz et consultez les résultats</p>
+    </div>
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        {% if user.est_administrateur %}
+        <a href="{% url 'quizzes:supervision_admin' %}" class="btn btn-outline" style="border-color:var(--navy); color:var(--navy); font-weight:600;">
+            🛡️ Supervision globale
+        </a>
+        {% endif %}
+        <a href="{% url 'quizzes:quiz_creer' %}" class="btn btn-primary">＋ Créer un quiz</a>
+    </div>
+</div>
+
+{% if quiz_list %}
+<div class="stats">
+    <div class="card stat">
+        <strong>{{ quiz_list|length }}</strong>
+        <span>Quiz créés</span>
+    </div>
+    <div class="card stat">
+        {% with publie=quiz_list|length %}
+        <strong>{{ publie }}</strong>
+        {% endwith %}
+        <span>Publiés</span>
+    </div>
+</div>
+
+<div class="card table-card" style="margin-top:1.5rem;">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Quiz</th>
+                <th>Questions</th>
+                <th>Statut</th>
+                <th>Tentatives</th>
+                <th class="text-right">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for quiz in quiz_list %}
+            <tr>
+                <td>
+                    <div class="user-cell">
+                        <div>
+                            <a href="{% url 'quizzes:quiz_detail' quiz.pk %}" style="font-weight:600; color:var(--navy);">{{ quiz.titre }}</a>
+                            {% if quiz.description %}
+                            <small style="display:block; color:var(--muted);">{{ quiz.description|truncatechars:70 }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </td>
+                <td>{{ quiz.nb_questions }}</td>
+                <td>
+                    {% if quiz.est_publie %}
+                        <span class="badge badge-green">Publié</span>
+                    {% else %}
+                        <span class="badge badge-muted">Brouillon</span>
+                    {% endif %}
+                </td>
+                <td>{{ quiz.nb_tentatives }}</td>
+                <td>
+                    <div class="actions">
+                        <a href="{% url 'quizzes:quiz_modifier' quiz.pk %}" class="btn btn-sm btn-outline">Modifier</a>
+                        <a href="{% url 'quizzes:questions_gerer' quiz.pk %}" class="btn btn-sm btn-outline">Questions</a>
+                        <a href="{% url 'quizzes:quiz_resultats' quiz.pk %}" class="btn btn-sm btn-outline">Résultats</a>
+                        <a href="{% url 'quizzes:quiz_supprimer' quiz.pk %}" class="btn btn-sm" style="background:var(--rust-soft);color:var(--rust);">Supprimer</a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% else %}
+<div class="card empty-state">
+    <p style="font-size:2.5rem; margin:0;">🎯</p>
+    <p>Vous n'avez pas encore créé de quiz.</p>
+    <a href="{% url 'quizzes:quiz_creer' %}" class="btn btn-primary" style="margin-top:1rem;">Créer mon premier quiz</a>
+</div>
+{% endif %}
+{% endblock %}

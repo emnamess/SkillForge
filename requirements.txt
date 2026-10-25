@@ -11,3 +11,12 @@ google-genai>=1.0
 
 # Espace Carrière : lecture du texte des CV (PDF)
 pypdf>=5.0
+
+# Tests : rapport de couverture (python run.py couverture)
+coverage>=7.6
+
+# Moteur de recommandation de certifications (TF-IDF, similarité cosinus)
+scikit-learn>=1.5
+
+# QR code de vérification imprimé sur les certificats (SVG, pur Python)
+segno>=1.6

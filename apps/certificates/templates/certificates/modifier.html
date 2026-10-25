@@ -1,0 +1,37 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Modifier le certificat{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/certificates.css' %}">{% endblock %}
+
+{% block content %}
+<a href="{{ certificat.get_absolute_url }}" class="back-link">← Retour au certificat</a>
+<h1 class="page-title">Modifier le certificat</h1>
+<p class="page-subtitle">{{ certificat.apprenant }} · code <code>{{ certificat.code_verification }}</code> (inchangé)</p>
+
+<div class="grid-2-1">
+    <form method="post" class="card form">
+        {% csrf_token %}
+        {% for error in form.non_field_errors %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endfor %}
+        {% include "partials/form_field.html" with field=form.titre_cours %}
+        {% if form.formateur %}{% include "partials/form_field.html" with field=form.formateur %}{% endif %}
+        <div class="form-row">
+            {% include "partials/form_field.html" with field=form.score %}
+            {% include "partials/form_field.html" with field=form.duree_heures %}
+        </div>
+        {% include "partials/form_field.html" with field=form.competences %}
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
+            <a href="{{ certificat.get_absolute_url }}" class="btn btn-outline">Annuler</a>
+        </div>
+    </form>
+
+    <section class="card" aria-labelledby="aide-titre">
+        <h2 id="aide-titre">Modifier ou révoquer ?</h2>
+        <p class="muted">Utilisez la modification pour corriger une erreur de saisie : la page de vérification
+            affichera aussitôt les nouvelles informations.</p>
+        <p class="muted">En cas de fraude, un administrateur doit <strong>révoquer</strong> le certificat :
+            il reste alors visible comme « révoqué » lors d'une vérification.</p>
+    </section>
+</div>
+{% endblock %}

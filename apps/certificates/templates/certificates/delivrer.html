@@ -1,0 +1,36 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Délivrer un certificat{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/certificates.css' %}">{% endblock %}
+
+{% block content %}
+<a href="{% url 'certificates:index' %}" class="back-link">← Progression et certificats</a>
+<h1 class="page-title">Délivrer un certificat</h1>
+<p class="page-subtitle">L'apprenant reçoit une notification et un e-mail avec le lien vers son certificat.</p>
+
+<div class="grid-2-1">
+    <form method="post" class="card form">
+        {% csrf_token %}
+        {% for error in form.non_field_errors %}<div class="alert alert-error">{{ error }}</div>{% endfor %}
+        {% include "partials/form_field.html" with field=form.apprenant %}
+        {% include "partials/form_field.html" with field=form.titre_cours %}
+        {% if form.formateur %}{% include "partials/form_field.html" with field=form.formateur %}{% endif %}
+        <div class="form-row">
+            {% include "partials/form_field.html" with field=form.score %}
+            {% include "partials/form_field.html" with field=form.duree_heures %}
+        </div>
+        {% include "partials/form_field.html" with field=form.competences %}
+        <button type="submit" class="btn btn-primary">Délivrer le certificat</button>
+    </form>
+
+    <section class="card" aria-labelledby="aide-titre">
+        <h2 id="aide-titre">Bon à savoir</h2>
+        <p class="muted">Un code unique (ex. <code>SF-7K2M-Q9XA</code>) est généré et imprimé sur le certificat.
+            N'importe qui peut le vérifier sur la page publique de vérification.</p>
+        <p class="muted">Un apprenant ne peut avoir qu'un seul certificat valide par cours.</p>
+        <p class="muted">Quand le module Cours sera branché, les certificats seront délivrés automatiquement
+            à 100 % de progression.</p>
+    </section>
+</div>
+{% endblock %}

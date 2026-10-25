@@ -1,0 +1,132 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}{{ quiz.titre }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/quizzes.css' %}">
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'quizzes:index' %}" class="back-link">← {% if user.est_formateur or user.est_administrateur %}Mes quiz{% else %}Quiz disponibles{% endif %}</a>
+
+<div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
+    <div>
+        <h1 class="page-title">{{ quiz.titre }}</h1>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem;">
+            {% if quiz.est_publie %}
+                <span class="badge badge-green">Publié</span>
+            {% else %}
+                <span class="badge badge-muted">Brouillon</span>
+            {% endif %}
+            <span class="badge badge-indigo">{{ quiz.nombre_questions }} question{{ quiz.nombre_questions|pluralize }}</span>
+            <span class="badge badge-orange">{{ quiz.total_points }} pt{{ quiz.total_points|pluralize }}</span>
+        </div>
+    </div>
+
+    {% if user.est_formateur or user.est_administrateur %}
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <a href="{% url 'quizzes:quiz_modifier' quiz.pk %}" class="btn btn-outline">Modifier</a>
+        <a href="{% url 'quizzes:questions_gerer' quiz.pk %}" class="btn btn-outline">Questions</a>
+        <a href="{% url 'quizzes:quiz_resultats' quiz.pk %}" class="btn btn-primary">Résultats</a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="grid-2-1">
+    <div>
+        {% if quiz.description %}
+        <div class="card" style="margin-bottom:1rem;">
+            <p style="margin:0;">{{ quiz.description }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Questions (aperçu) -->
+        <div class="card">
+            <h2>Questions</h2>
+            {% if questions %}
+            <div class="question-list">
+                {% for question in questions %}
+                <div style="padding:0.75rem 0; border-bottom: 1px solid var(--border);">
+                    <div class="question-header">
+                        <span class="question-numero">{{ forloop.counter }}</span>
+                        <span class="question-enonce">{{ question.enonce }}</span>
+                        <span class="question-points">{{ question.points }} pt{{ question.points|pluralize }}</span>
+                        <span class="badge badge-indigo" style="font-size:0.75rem;">{{ question.get_type_display }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="muted">Aucune question pour le moment.</p>
+            {% if user.est_formateur or user.est_administrateur %}
+            <a href="{% url 'quizzes:questions_gerer' quiz.pk %}" class="btn btn-outline btn-sm">Ajouter des questions</a>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <div>
+        <!-- Infos quiz -->
+        <div class="card" style="margin-bottom:1rem;">
+            <h2>Informations</h2>
+            <div class="quiz-info">
+                <div class="quiz-info-item">
+                    <span>🎯 Seuil :</span>
+                    <strong>{{ quiz.seuil_reussite }}%</strong>
+                </div>
+                {% if quiz.duree_minutes %}
+                <div class="quiz-info-item">
+                    <span>⏱ Durée :</span>
+                    <strong>{{ quiz.duree_minutes }} min</strong>
+                </div>
+                {% endif %}
+                <div class="quiz-info-item">
+                    <span>📝 Questions :</span>
+                    <strong>{{ quiz.nombre_questions }}</strong>
+                </div>
+                <div class="quiz-info-item">
+                    <span>⭐ Total :</span>
+                    <strong>{{ quiz.total_points }} pts</strong>
+                </div>
+                <div class="quiz-info-item">
+                    <span>🤖 Correction :</span>
+                    <strong>IA Gemini</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action apprenant -->
+        {% if user.est_apprenant %}
+        <div class="card">
+            <h2>Vos tentatives</h2>
+            {% if tentatives %}
+            {% for t in tentatives %}
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0; border-bottom:1px solid var(--border);">
+                <div>
+                    {% if t.reussie %}
+                        <span class="badge badge-green">Réussi ✅</span>
+                    {% else %}
+                        <span class="badge badge-rust">Non réussi ❌</span>
+                    {% endif %}
+                    <small class="muted" style="display:block; margin-top:0.2rem;">{{ t.date_debut|date:"d/m/Y H:i" }}</small>
+                </div>
+                <div style="text-align:right;">
+                    <strong>{{ t.pourcentage }}%</strong>
+                    <small class="muted" style="display:block;">{{ t.score }}/{{ t.score_total }}</small>
+                </div>
+                <a href="{% url 'quizzes:tentative_detail' t.pk %}" class="btn btn-outline btn-sm">Voir</a>
+            </div>
+            {% endfor %}
+            <a href="{% url 'quizzes:passer_quiz' quiz.pk %}" class="btn btn-primary btn-block" style="margin-top:1rem;">🔄 Repasser le quiz</a>
+            {% else %}
+            <p class="muted">Vous n'avez pas encore passé ce quiz.</p>
+            {% if quiz.nombre_questions > 0 %}
+            <a href="{% url 'quizzes:passer_quiz' quiz.pk %}" class="btn btn-primary btn-block" style="margin-top:0.5rem;">🚀 Commencer le quiz</a>
+            {% endif %}
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Mes certificats{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/certificates.css' %}">{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1 class="page-title">Mes certificats</h1>
+        <p class="page-subtitle">Chaque certificat porte un code que les recruteurs peuvent vérifier en ligne.</p>
+    </div>
+    <a href="{% url 'certificates:verifier' %}" class="btn btn-outline">Vérifier un certificat</a>
+</div>
+
+{% if certificats %}
+    <div class="certif-grid">
+        {% for c in certificats %}
+            <a href="{{ c.get_absolute_url }}" class="card certif-card{% if not c.est_valide %} revoque{% endif %}">
+                <div class="certif-card-top">
+                    <span class="certif-seal" aria-hidden="true">SF</span>
+                    {% if c.est_valide %}<span class="badge badge-green">Valide</span>{% else %}<span class="badge badge-rust">Révoqué</span>{% endif %}
+                </div>
+                <h2>{{ c.titre_cours }}</h2>
+                <span class="meta">Délivré le {{ c.date_delivrance|date:"j F Y" }}{% if c.nom_formateur %} · {{ c.nom_formateur }}{% endif %}</span>
+                <div class="certif-card-foot">
+                    <span class="code">{{ c.code_verification }}</span>
+                    {% if c.score is not None %}<span class="badge badge-indigo">{{ c.score }} % · {{ c.mention }}</span>{% endif %}
+                </div>
+            </a>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card empty-state">
+        <h2>Pas encore de certificat</h2>
+        <p class="muted">Terminez un cours à 100 % avec un score d'au moins {{ score_minimum }} % aux quiz :
+            votre certificat sera délivré automatiquement.</p>
+        <a href="{% url 'courses:index' %}" class="btn btn-primary">Parcourir le catalogue</a>
+    </div>
+{% endif %}
+
+<section class="reco" aria-labelledby="reco-titre" data-recommandations="{% url 'certificates:recommandations' %}">
+    <div class="section-head">
+        <h2 id="reco-titre">Certifications recommandées pour vous <span class="badge badge-orange">IA</span></h2>
+        <a href="{% url 'accounts:profil' %}" class="muted">Affiner avec ma présentation</a>
+    </div>
+    <div class="reco-grid" data-reco-liste aria-live="polite" aria-busy="true">
+        {% for i in "123" %}
+            <div class="card reco-card reco-squelette" aria-hidden="true"><span></span><span></span><span></span></div>
+        {% endfor %}
+        <p class="sr-only" data-reco-chargement>Calcul des recommandations en cours…</p>
+    </div>
+    <div class="alert alert-error reco-erreur" data-reco-erreur role="alert" hidden>
+        <span data-reco-erreur-texte>Les recommandations n'ont pas pu être chargées.</span>
+        <button type="button" class="btn btn-sm btn-outline" data-reco-reessayer>Réessayer</button>
+    </div>
+    <p class="muted reco-note" data-reco-note hidden></p>
+    <noscript><p class="muted">Activez JavaScript pour afficher vos recommandations.</p></noscript>
+</section>
+
+<h2 class="section-title">Ma progression</h2>
+{% if progression is None %}
+    {% include "certificates/partials/progression_attente.html" %}
+{% elif progression %}
+    <div class="card progress-list">
+        {% for ligne in progression %}
+            <div>
+                <div class="progress-item-head">
+                    <span>{{ ligne.cours }}{% if ligne.certifie %} <span class="badge badge-green">Certifié</span>{% endif %}</span>
+                    <strong>{{ ligne.progression }} %</strong>
+                </div>
+                <span class="progress" role="progressbar" aria-valuenow="{{ ligne.progression }}" aria-valuemin="0" aria-valuemax="100"
+                      aria-label="Progression {{ ligne.cours }}"><span style="width: {{ ligne.progression }}%"></span></span>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card empty-state"><p class="muted">Vous n'êtes inscrit à aucun cours pour le moment.</p></div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/certificates.js' %}" defer></script>{% endblock %}

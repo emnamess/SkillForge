@@ -1,0 +1,131 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Performance du modèle de recommandation{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/certificates.css' %}">{% endblock %}
+
+{% block content %}
+<a href="{% url 'certificates:statistiques' %}" class="back-link">← Statistiques</a>
+<div class="page-head">
+    <div>
+        <h1 class="page-title">Performance du modèle de recommandation</h1>
+        <p class="page-subtitle">Évaluation hors ligne du moteur qui suggère aux apprenants leurs prochaines certifications.</p>
+    </div>
+    <a href="?recalculer=1" class="btn btn-outline">Recalculer</a>
+</div>
+
+{% with e=evaluation %}
+<div class="stats">
+    <div class="stat card"><strong>{{ e.nb_certificats }}</strong><span>Certificats d'entraînement</span></div>
+    <div class="stat card"><strong>{{ e.nb_cours }}</strong><span>Cours dans le catalogue</span></div>
+    <div class="stat card"><strong>{{ e.nb_apprenants_testes }}</strong><span>Apprenants testés (≥ 2 certificats)</span></div>
+    <div class="stat card">
+        <strong>{% if latence %}{{ latence.moyenne|floatformat:1 }} ms{% else %}—{% endif %}</strong>
+        <span>Temps de réponse moyen{% if latence %} (p95 {{ latence.p95|floatformat:1 }} ms){% endif %}</span>
+    </div>
+</div>
+
+{% if not e.methodes %}
+    <div class="card empty-state">
+        <h2>Pas assez de données</h2>
+        <p class="muted">Il faut des apprenants ayant au moins deux certificats pour évaluer le modèle.
+            Lancez <code>python run.py demo --reinitialiser</code> pour charger les données de démonstration.</p>
+    </div>
+{% else %}
+<section class="card table-card">
+    <div class="table-titre">
+        <h2>Comparaison des méthodes</h2>
+        <p class="muted">Leave-one-out : une certification cachée par apprenant, retrouvée ou non dans les {{ e.k }} premières
+            suggestions. Moyenne de {{ e.repetitions }} tirages.</p>
+    </div>
+    <table class="table">
+        <caption class="sr-only">Métriques par méthode de recommandation</caption>
+        <thead>
+            <tr>
+                <th scope="col">Méthode</th>
+                <th scope="col">HitRate@{{ e.k }} (= Recall@{{ e.k }})</th>
+                <th scope="col">Precision@{{ e.k }}</th>
+                <th scope="col">MRR</th>
+                <th scope="col">NDCG@{{ e.k }}</th>
+                <th scope="col">Gain vs référence</th>
+                <th scope="col" class="text-right">Latence</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for m in e.methodes %}
+            <tr{% if m.methode == "hybride" %} class="ligne-retenue"{% endif %}>
+                <th scope="row">{{ m.libelle }}</th>
+                <td>
+                    <div class="progress-cell">
+                        <span class="progress progress-indigo" aria-hidden="true"><span style="width: {{ m.largeur }}%"></span></span>
+                        <strong>{% widthratio m.hit_rate 1 100 %} %</strong>
+                    </div>
+                    <small class="muted">± {% widthratio m.hit_rate_ecart 1 100 %} pts</small>
+                </td>
+                <td>{{ m.precision|floatformat:2 }}</td>
+                <td>{{ m.mrr|floatformat:2 }}</td>
+                <td>{{ m.ndcg|floatformat:2 }}</td>
+                <td>{% if m.methode == "populaires" %}référence{% elif m.gain is not None %}{% if m.gain >= 0 %}+{% endif %}{% widthratio m.gain 1 100 %} %{% endif %}</td>
+                <td class="text-right">{{ m.latence_ms|floatformat:2 }} ms</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<div class="charts">
+    <section class="card chart-card">
+        <h2>Nouvel apprenant (démarrage à froid)</h2>
+        <p class="muted">Aucune certification, seulement sa présentation · {{ demarrage.nb_apprenants_testes }} apprenants testés</p>
+        <table class="table table-compacte">
+            <caption class="sr-only">Métriques pour un nouvel apprenant</caption>
+            <thead><tr><th scope="col">Méthode</th><th scope="col">Precision@{{ demarrage.k }}</th><th scope="col">Recall@{{ demarrage.k }}</th></tr></thead>
+            <tbody>
+            {% for m in demarrage.methodes %}
+                <tr><th scope="row">{{ m.libelle }}</th><td>{{ m.precision|floatformat:2 }}</td><td>{{ m.rappel|floatformat:2 }}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <p class="muted">Le filtrage collaboratif seul ne peut rien proposer à un nouvel apprenant : c'est la partie
+            « contenu » qui exploite sa présentation.</p>
+    </section>
+
+    <section class="card chart-card">
+        <h2>Réglage du poids α</h2>
+        <p class="muted">score = α × contenu + (1 − α) × collaboratif · valeur retenue : α = {{ e.alpha }}</p>
+        <table class="table table-compacte">
+            <caption class="sr-only">HitRate et MRR selon α</caption>
+            <thead><tr><th scope="col" class="sans-majuscules">α</th><th scope="col">HitRate@{{ e.k }}</th><th scope="col">MRR</th></tr></thead>
+            <tbody>
+            {% for a in alphas %}
+                <tr{% if a.alpha == e.alpha %} class="ligne-retenue"{% endif %}>
+                    <th scope="row">{{ a.alpha }}{% if a.alpha == 0 %} (collaboratif seul){% elif a.alpha == 1 %} (contenu seul){% endif %}</th>
+                    <td>{{ a.hit_rate|floatformat:2 }}</td><td>{{ a.mrr|floatformat:2 }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </section>
+</div>
+{% endif %}
+
+<section class="card methode">
+    <h2>Comment lire ces résultats</h2>
+    <dl>
+        <dt>HitRate@{{ e.k }} / Recall@{{ e.k }}</dt>
+        <dd>Part des certifications cachées que le modèle retrouve parmi ses {{ e.k }} suggestions.</dd>
+        <dt>Precision@{{ e.k }}</dt>
+        <dd>Part des suggestions qui étaient la bonne. Une seule certification étant cachée, le maximum est 1/{{ e.k }} ≈ {% widthratio 1 e.k 100 %} %.</dd>
+        <dt>MRR et NDCG@{{ e.k }}</dt>
+        <dd>Tiennent compte du rang : une bonne suggestion en 1re position vaut plus qu'en 3e (1 = parfait).</dd>
+        <dt>Pourquoi pas de matrice de confusion ?</dt>
+        <dd>Ce n'est pas une classification mais un classement : les métriques « @k » sont les mesures standard des systèmes de recommandation.</dd>
+    </dl>
+    <p class="muted">Limite : tant que le module Cours n'est pas fusionné, le modèle apprend sur les certificats de démonstration,
+        dont {{ e.nb_apprenants }} apprenants en grande partie simulés (parcours générés). Les chiffres seront à recalculer
+        sur les vraies données.</p>
+    <p class="muted">Calculé le {{ calcule_le|date:"d/m/Y à H:i" }} en {{ duree_evaluation_s|floatformat:2 }} s ·
+        entraînement du modèle : {{ e.duree_entrainement_ms|floatformat:1 }} ms.</p>
+</section>
+{% endwith %}
+{% endblock %}

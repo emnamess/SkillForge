@@ -1,0 +1,22 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Supprimer le certificat{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/certificates.css' %}">{% endblock %}
+
+{% block content %}
+<a href="{{ certificat.get_absolute_url }}" class="back-link">← Retour au certificat</a>
+<div class="card form-narrow">
+    <h1 class="page-title">Supprimer ce certificat ?</h1>
+    <p><strong>{{ certificat.titre_cours }}</strong> · {{ certificat.apprenant }} · <code>{{ certificat.code_verification }}</code></p>
+    <div class="alert alert-warning" role="note">
+        La suppression est définitive : le code de vérification deviendra « inconnu ».
+        S'il s'agit d'une fraude, préférez la <strong>révocation</strong>, qui garde une trace.
+    </div>
+    <form method="post" class="form-actions">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Supprimer définitivement</button>
+        <a href="{{ certificat.get_absolute_url }}" class="btn btn-outline">Annuler</a>
+    </form>
+</div>
+{% endblock %}

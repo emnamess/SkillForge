@@ -1,0 +1,78 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Questions · {{ quiz.titre }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/quizzes.css' %}">
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'quizzes:quiz_detail' quiz.pk %}" class="back-link">← {{ quiz.titre }}</a>
+
+<div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
+    <div>
+        <h1 class="page-title">Questions</h1>
+        <p class="page-subtitle">{{ quiz.titre }} · {{ questions|length }} question{{ questions|length|pluralize }}</p>
+    </div>
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <a href="{% url 'quizzes:quiz_generer_ia' quiz.pk %}" class="btn btn-outline" style="border-color:var(--indigo); color:var(--indigo); font-weight:600;">✨ Générer par IA</a>
+        <a href="{% url 'quizzes:question_ajouter' quiz.pk %}" class="btn btn-primary">＋ Ajouter une question</a>
+    </div>
+</div>
+
+{% if questions %}
+<div class="question-list">
+    {% for question in questions %}
+    <div class="card question-card">
+        <div class="question-header">
+            <span class="question-numero">{{ question.ordre }}</span>
+            <div style="flex:1;">
+                <span class="question-enonce">{{ question.enonce }}</span>
+                <div style="margin-top:0.3rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+                    <span class="badge badge-indigo" style="font-size:0.75rem;">{{ question.get_type_display }}</span>
+                    <span class="badge badge-orange" style="font-size:0.75rem;">{{ question.points }} pt{{ question.points|pluralize }}</span>
+                </div>
+            </div>
+            <div class="question-actions">
+                <a href="{% url 'quizzes:question_modifier' quiz.pk question.pk %}" class="btn btn-outline btn-sm">Modifier</a>
+                <a href="{% url 'quizzes:question_supprimer' quiz.pk question.pk %}" class="btn btn-sm" style="background:var(--rust-soft);color:var(--rust);">Supprimer</a>
+            </div>
+        </div>
+
+        {% if question.type == 'texte_libre' %}
+            {% if question.consigne_ia %}
+            <div class="consigne-ia">
+                🤖 <strong>Consigne IA :</strong> {{ question.consigne_ia }}
+            </div>
+            {% endif %}
+        {% else %}
+            {% if question.choix.all %}
+            <ul class="question-choix">
+                {% for choix in question.choix.all %}
+                <li class="{% if choix.est_correct %}choix-correct{% else %}choix-incorrect{% endif %}">
+                    {% if choix.est_correct %}✓{% else %}✗{% endif %} {{ choix.texte }}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="muted" style="margin: 0.5rem 0 0 2.75rem; font-size:0.85rem;">⚠ Aucun choix défini</p>
+            {% endif %}
+        {% endif %}
+
+        {% if question.explication %}
+        <div style="margin: 0.5rem 0 0 2.75rem; font-size:0.85rem; color:var(--muted);">
+            💡 {{ question.explication }}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card empty-state">
+    <p style="font-size:2.5rem; margin:0;">📝</p>
+    <p>Ce quiz ne contient aucune question.</p>
+    <a href="{% url 'quizzes:question_ajouter' quiz.pk %}" class="btn btn-primary" style="margin-top:1rem;">Ajouter la première question</a>
+</div>
+{% endif %}
+{% endblock %}

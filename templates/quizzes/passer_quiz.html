@@ -1,0 +1,187 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Passer · {{ quiz.titre }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/quizzes.css' %}">
+<style>
+    .sticky-quiz-bar {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--white);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 0.75rem 1.25rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    .progress-bar-container {
+        flex: 1;
+        min-width: 180px;
+        background: #f0edf8;
+        border-radius: 999px;
+        height: 10px;
+        overflow: hidden;
+    }
+    .progress-bar-fill {
+        background: var(--indigo);
+        height: 100%;
+        width: 0%;
+        transition: width 0.3s ease;
+    }
+    .timer-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: var(--navy);
+        padding: 0.35rem 0.75rem;
+        border-radius: 8px;
+        background: var(--indigo-soft);
+    }
+    .timer-urgent {
+        background: var(--rust-soft) !important;
+        color: var(--rust) !important;
+        animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'quizzes:quiz_detail' quiz.pk %}" class="back-link">← Retour au quiz</a>
+
+<div class="sticky-quiz-bar">
+    <div style="display:flex; align-items:center; gap:0.75rem; flex:1; min-width:250px;">
+        <span style="font-weight:600; font-size:0.9rem;">Progression :</span>
+        <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="progress-fill"></div>
+        </div>
+        <span style="font-size:0.85rem; color:var(--muted); font-weight:600;"><span id="nb-repondues">0</span>/{{ questions|length }}</span>
+    </div>
+
+    {% if quiz.duree_minutes %}
+    <div class="timer-badge" id="timer-box">
+        ⏱ <span id="timer-display">{{ quiz.duree_minutes }}:00</span>
+    </div>
+    {% endif %}
+</div>
+
+<h1 class="page-title">{{ quiz.titre }}</h1>
+
+<div class="quiz-info" style="margin-bottom:1.5rem;">
+    <span class="quiz-info-item">📝 <strong>{{ questions|length }}</strong> question{{ questions|length|pluralize }}</span>
+    {% if quiz.duree_minutes %}<span class="quiz-info-item">⏱ Durée : <strong>{{ quiz.duree_minutes }} min</strong></span>{% endif %}
+    <span class="quiz-info-item">🎯 Seuil : <strong>{{ quiz.seuil_reussite }}%</strong></span>
+</div>
+
+<form method="post" id="quiz-form">
+    {% csrf_token %}
+
+    {% for question in questions %}
+    <div class="card quiz-question" data-question-id="{{ question.pk }}">
+        <div class="question-header">
+            <span class="question-numero">{{ forloop.counter }}</span>
+            <span class="question-enonce">{{ question.enonce }}</span>
+            <span class="question-points">{{ question.points }} pt{{ question.points|pluralize }}</span>
+        </div>
+
+        {% if question.type == 'qcm' or question.type == 'vrai_faux' %}
+        <div class="quiz-choix">
+            {% for choix in question.choix.all %}
+            <label>
+                <input type="radio" name="question_{{ question.pk }}" value="{{ choix.pk }}" class="reponse-input">
+                <span>{{ choix.texte }}</span>
+            </label>
+            {% endfor %}
+        </div>
+        {% elif question.type == 'texte_libre' %}
+        <div class="quiz-textarea">
+            <textarea name="question_{{ question.pk }}" rows="4" placeholder="Rédigez votre réponse avec vos propres mots..." class="reponse-input"></textarea>
+            <small class="help" style="color:var(--indigo); display:block; margin-top:0.4rem;">🤖 Cette réponse sera analysée et évaluée par l'intelligence artificielle Gemini.</small>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    <div class="quiz-submit">
+        <button type="submit" class="btn btn-primary" id="btn-soumettre" style="padding:0.8rem 2.2rem; font-size:1.05rem;">
+            ✅ Soumettre le quiz
+        </button>
+    </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const totalQuestions = {{ questions|length }};
+    const form = document.getElementById('quiz-form');
+    const inputs = document.querySelectorAll('.reponse-input');
+    const progressFill = document.getElementById('progress-fill');
+    const nbReponduesSpan = document.getElementById('nb-repondues');
+
+    function updateProgress() {
+        const questionCards = document.querySelectorAll('.quiz-question');
+        let answered = 0;
+        questionCards.forEach(card => {
+            const radioChecked = card.querySelector('input[type="radio"]:checked');
+            const textarea = card.querySelector('textarea');
+            if (radioChecked || (textarea && textarea.value.trim().length > 0)) {
+                answered++;
+            }
+        });
+        const percent = Math.round((answered / totalQuestions) * 100);
+        progressFill.style.width = percent + '%';
+        nbReponduesSpan.textContent = answered;
+    }
+
+    inputs.forEach(input => {
+        input.addEventListener('change', updateProgress);
+        input.addEventListener('input', updateProgress);
+    });
+
+    updateProgress();
+
+    // Timer
+    {% if quiz.duree_minutes %}
+    let timeLeft = {{ quiz.duree_minutes }} * 60;
+    const timerDisplay = document.getElementById('timer-display');
+    const timerBox = document.getElementById('timer-box');
+
+    const countdown = setInterval(function() {
+        timeLeft--;
+        if (timeLeft <= 0) {
+            clearInterval(countdown);
+            alert("⏰ Le temps imparti est écoulé ! Vos réponses sont transmises automatiquement.");
+            form.submit();
+            return;
+        }
+
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        timerDisplay.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+
+        if (timeLeft <= 60) {
+            timerBox.classList.add('timer-urgent');
+        }
+    }, 1000);
+    {% endif %}
+
+    form.addEventListener('submit', function() {
+        const btn = document.getElementById('btn-soumettre');
+        btn.disabled = true;
+        btn.textContent = '⏳ Correction en cours par l\'IA...';
+    });
+});
+</script>
+{% endblock %}
