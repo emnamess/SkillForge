@@ -308,7 +308,7 @@ def seance_action(request, pk, action):
     if action == "annuler" and not (request.user.est_administrateur or request.user.pk in (seance.formateur_id, seance.apprenant_id)):
         raise PermissionDenied
     try:
-        changer_statut(seance, statut_cible)
+        changer_statut(seance, statut_cible, par=request.user)
     except ValidationError as exc:
         for erreur in exc.messages:
             messages.error(request, erreur)

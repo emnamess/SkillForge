@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.models import User
-from apps.notifications.models import Rappel
+from apps.notifications.models import Notification, Rappel
 
 from .models import Disponibilite, SeanceMentorat
 from .services import CreneauIndisponible, creneaux_disponibles, reserver_seance
@@ -95,6 +95,46 @@ class MentoringTests(TestCase):
         seance.refresh_from_db()
         self.assertEqual(seance.statut, SeanceMentorat.Statut.ANNULEE)
         self.assertFalse(Rappel.objects.filter(object_id=seance.pk, envoye=False).exists())
+
+    def test_demande_d_apprenant_notifie_le_formateur(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            seance = reserver_seance(self.disponibilite.pk, self.apprenant, self.debut, "Django")
+        seances = Notification.objects.filter(type=Notification.Type.SEANCE)
+        notification = seances.get(destinataire=self.formateur)
+        self.assertEqual(notification.titre, "Nouvelle demande de séance")
+        self.assertEqual(notification.lien, seance.get_absolute_url())
+        self.assertFalse(seances.filter(destinataire=self.apprenant).exists())
+
+    def test_seance_planifiee_par_le_formateur_notifie_l_apprenant(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            reserver_seance(self.disponibilite.pk, self.apprenant, self.debut, "Django", demandeur=self.formateur)
+        self.assertTrue(Notification.objects.filter(destinataire=self.apprenant,
+                                                    titre="Nouvelle séance de mentorat").exists())
+        self.assertFalse(Notification.objects.filter(destinataire=self.formateur,
+                                                     type=Notification.Type.SEANCE).exists())
+
+    def test_confirmation_et_annulation_notifient_l_autre_participant(self):
+        seance = reserver_seance(self.disponibilite.pk, self.apprenant, self.debut, "Django")
+        self.client.force_login(self.formateur)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(reverse("mentoring:seance_action", args=[seance.pk, "confirmer"]))
+        self.assertTrue(Notification.objects.filter(destinataire=self.apprenant,
+                                                    titre="Séance de mentorat confirmée").exists())
+
+        self.client.force_login(self.apprenant)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(reverse("mentoring:seance_action", args=[seance.pk, "annuler"]))
+        annulations = Notification.objects.filter(titre="Séance de mentorat annulée")
+        self.assertEqual([n.destinataire for n in annulations], [self.formateur])
+
+    def test_annulation_par_un_administrateur_notifie_les_deux_participants(self):
+        seance = reserver_seance(self.disponibilite.pk, self.apprenant, self.debut, "Django")
+        self.client.force_login(self.admin)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(reverse("mentoring:seance_action", args=[seance.pk, "annuler"]))
+        destinataires = set(Notification.objects.filter(titre="Séance de mentorat annulée")
+                            .values_list("destinataire", flat=True))
+        self.assertEqual(destinataires, {self.apprenant.pk, self.formateur.pk})
 
     def test_annulation_ne_libere_pas_le_creneau_avec_seance_active(self):
         seance = reserver_seance(self.disponibilite.pk, self.apprenant, self.debut, "Django")
