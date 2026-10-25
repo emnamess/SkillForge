@@ -1,0 +1,39 @@
+{% extends "base_app.html" %}
+
+{% block title %}Mes cours{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1 class="page-title">Mes cours</h1>
+        <p class="page-subtitle">Retrouvez les cours auxquels vous êtes inscrit et votre progression.</p>
+    </div>
+    <a href="{% url 'courses:index' %}" class="btn btn-outline">Parcourir le catalogue</a>
+</div>
+
+{% if inscriptions %}
+    {% for inscription in inscriptions %}
+        <article class="card" style="margin-bottom:1rem;">
+            <h2>
+                <a href="{% url 'courses:detail' inscription.cours.pk %}">{{ inscription.cours.titre }}</a>
+                {% if not inscription.cours.est_publie %}<span class="badge badge-orange">Dépublié</span>{% endif %}
+            </h2>
+            <p class="muted">Formateur : {{ inscription.cours.formateur.get_full_name|default:inscription.cours.formateur.username }}</p>
+            <div class="progress-item-head">
+                <span>Progression</span>
+                <strong>{{ inscription.progression }} %</strong>
+            </div>
+            <span class="progress" role="progressbar" aria-valuenow="{{ inscription.progression }}"
+                  aria-valuemin="0" aria-valuemax="100" aria-label="Progression {{ inscription.cours.titre }}">
+                <span style="width: {{ inscription.progression }}%"></span>
+            </span>
+        </article>
+    {% endfor %}
+{% else %}
+    <div class="card empty-state">
+        <h2>Vous n’êtes inscrit à aucun cours</h2>
+        <p class="muted">Parcourez le catalogue pour trouver un cours qui vous intéresse.</p>
+        <a href="{% url 'courses:index' %}" class="btn btn-primary">Voir le catalogue</a>
+    </div>
+{% endif %}
+{% endblock %}

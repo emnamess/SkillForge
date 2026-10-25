@@ -3,13 +3,27 @@
 from django import forms
 from django.forms import inlineformset_factory
 
+from apps.courses.models import Cours
+
 from .models import Choix, Question, Quiz
 
 
 class QuizForm(forms.ModelForm):
+    def __init__(self, *args, formateur=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if formateur is None:
+            self.fields["cours"].queryset = Cours.objects.none()
+        elif formateur.est_administrateur:
+            self.fields["cours"].queryset = Cours.objects.all().order_by("titre")
+        else:
+            cours_autorises = Cours.objects.filter(formateur=formateur)
+            if self.instance.pk and self.instance.cours_id:
+                cours_autorises = cours_autorises | Cours.objects.filter(pk=self.instance.cours_id)
+            self.fields["cours"].queryset = cours_autorises.order_by("titre")
+
     class Meta:
         model = Quiz
-        fields = ["titre", "description", "seuil_reussite", "duree_minutes", "est_publie", "melanger_questions"]
+        fields = ["titre", "description", "cours", "seuil_reussite", "duree_minutes", "est_publie", "melanger_questions"]
         widgets = {
             "titre": forms.TextInput(attrs={"placeholder": "Ex : Les bases de SQL"}),
             "description": forms.Textarea(attrs={"rows": 3, "placeholder": "Description du quiz…"}),

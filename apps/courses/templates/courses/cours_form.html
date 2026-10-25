@@ -1,0 +1,16 @@
+{% extends "base_app.html" %}
+
+{% block title %}{% if creation %}Créer un cours{% else %}Modifier {{ cours.titre }}{% endif %}{% endblock %}
+
+{% block content %}
+<a href="{% if creation %}{% url 'courses:index' %}{% else %}{% url 'courses:detail' cours.pk %}{% endif %}" class="back-link">← Retour</a>
+<h1 class="page-title">{% if creation %}Créer un cours{% else %}Modifier le cours{% endif %}</h1>
+<p class="page-subtitle">Renseignez les informations du cours. Le responsable ne peut pas être changé depuis ce formulaire.</p>
+
+<form method="post" class="card form form-narrow">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert-error">{{ form.non_field_errors }}</div>{% endif %}
+    {% for field in form %}{% include "partials/form_field.html" with field=field %}{% endfor %}
+    <button type="submit" class="btn btn-primary">{% if creation %}Créer le cours{% else %}Enregistrer{% endif %}</button>
+</form>
+{% endblock %}

@@ -17,9 +17,10 @@ class QuestionInline(admin.TabularInline):
 
 @admin.register(Quiz)
 class QuizAdmin(admin.ModelAdmin):
-    list_display = ("titre", "formateur", "est_publie", "nombre_questions", "date_creation")
-    list_filter = ("est_publie", "date_creation")
-    search_fields = ("titre", "description")
+    list_display = ("titre", "formateur", "cours", "est_publie", "nombre_questions", "date_creation")
+    list_filter = ("est_publie", "cours", "date_creation")
+    search_fields = ("titre", "description", "cours__titre")
+    list_select_related = ("formateur", "cours")
     inlines = [QuestionInline]
 
 

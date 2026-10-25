@@ -18,6 +18,15 @@ class Quiz(models.Model):
         related_name="quiz_crees",
         verbose_name="formateur",
     )
+    cours = models.ForeignKey(
+        "courses.Cours",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="quiz",
+        verbose_name="cours associé",
+        help_text="Laissez vide pour un quiz indépendant d’un cours.",
+    )
     titre = models.CharField("titre", max_length=200)
     description = models.TextField("description", blank=True)
     seuil_reussite = models.PositiveIntegerField(

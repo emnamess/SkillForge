@@ -6,6 +6,8 @@
     </a>
     <nav class="sidebar-nav">
         <a href="{% url 'accounts:dashboard' %}" class="{% if page == 'dashboard' %}active{% endif %}">Tableau de bord</a>
+        <a href="{% url 'courses:index' %}" class="{% if current == 'courses' and page != 'mes_cours' %}active{% endif %}">{% if user.est_formateur %}Mes cours{% else %}Catalogue{% endif %}</a>
+        {% if user.est_apprenant %}<a href="{% url 'courses:mes_cours' %}" class="{% if page == 'mes_cours' %}active{% endif %}">Mes cours</a>{% endif %}
         {% if user.est_recruteur %}
             <a href="{% url 'careers:tableau_recruteur' %}" class="{% if current == 'careers' and page != 'mes_offres' %}active{% endif %}">Espace recruteur</a>
             <a href="{% url 'careers:mes_offres' %}" class="{% if page == 'mes_offres' %}active{% endif %}">Mes offres</a>

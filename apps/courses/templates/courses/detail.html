@@ -1,0 +1,105 @@
+{% extends "base_app.html" %}
+
+{% block title %}{{ cours.titre }}{% endblock %}
+
+{% block content %}
+<a href="{% url 'courses:index' %}" class="back-link">← Retour au catalogue</a>
+
+<section class="card" aria-labelledby="cours-titre">
+    <div class="page-head">
+        <div>
+            <h1 id="cours-titre" class="page-title">{{ cours.titre }}{% if not cours.est_publie %} <span class="badge badge-orange">Brouillon / dépublié</span>{% endif %}</h1>
+            <p class="muted">Formateur : {{ cours.formateur.get_full_name|default:cours.formateur.username }}</p>
+        </div>
+        {% if peut_gerer %}
+            <div class="page-head-actions">
+                <a href="{% url 'courses:cours_modifier' cours.pk %}" class="btn btn-outline">Modifier</a>
+                <a href="{% url 'courses:module_creer' cours.pk %}" class="btn btn-outline">Ajouter un module</a>
+                <form method="post" action="{% url 'courses:cours_publication' cours.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary">{% if cours.est_publie %}Dépublier{% else %}Publier{% endif %}</button>
+                </form>
+                <a href="{% url 'courses:cours_supprimer' cours.pk %}" class="btn btn-outline">Supprimer</a>
+            </div>
+        {% endif %}
+    </div>
+    {% if cours.description %}
+        <p>{{ cours.description|linebreaksbr }}</p>
+    {% else %}
+        <p class="muted">Aucune description disponible.</p>
+    {% endif %}
+    {% if est_apprenant and cours.est_publie %}
+        {% if est_inscrit %}
+            <p><span class="badge badge-green">Déjà inscrit</span></p>
+        {% else %}
+            <form method="post" action="{% url 'courses:inscrire' cours.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary">S’inscrire</button>
+            </form>
+        {% endif %}
+    {% elif est_apprenant and est_inscrit %}
+        <p class="alert alert-warning">Ce cours n’accepte plus de nouvelles inscriptions. Votre accès et votre progression sont conservés.</p>
+    {% endif %}
+    {% if inscription %}
+        <div class="progress-item-head">
+            <span>Votre progression</span><strong>{{ inscription.progression }} %</strong>
+        </div>
+        <span class="progress" role="progressbar" aria-valuenow="{{ inscription.progression }}" aria-valuemin="0" aria-valuemax="100" aria-label="Votre progression dans {{ cours.titre }}">
+            <span style="width: {{ inscription.progression }}%"></span>
+        </span>
+    {% endif %}
+</section>
+
+<h2 class="section-title">Modules du cours</h2>
+{% if cours.modules.all %}
+    {% for module in cours.modules.all %}
+        <article class="card" style="margin-bottom:1rem;">
+            <div class="page-head">
+                <div>
+                    <h3>{{ module.ordre }}. {{ module.titre }}</h3>
+                    {% if module.description %}<p>{{ module.description|linebreaksbr }}</p>{% endif %}
+                </div>
+                {% if peut_gerer %}
+                    <div class="page-head-actions">
+                        <a href="{% url 'courses:module_modifier' module.pk %}" class="btn btn-outline">Modifier</a>
+                        <a href="{% url 'courses:module_supprimer' module.pk %}" class="btn btn-outline">Supprimer</a>
+                    </div>
+                {% endif %}
+            </div>
+            {% if module.contenu %}<div>{{ module.contenu|linebreaks }}</div>{% endif %}
+            {% if inscription %}
+                {% if module.pk in progression_modules %}
+                    <p><span class="badge badge-green">Module terminé</span></p>
+                {% else %}
+                    <form method="post" action="{% url 'courses:module_terminer' module.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline">Marquer comme terminé</button>
+                    </form>
+                {% endif %}
+            {% endif %}
+        </article>
+    {% endfor %}
+{% else %}
+    <div class="card empty-state">
+        <p class="muted">Aucun module n’a encore été ajouté à ce cours. Sans module, la progression reste à 0 %.</p>
+    </div>
+{% endif %}
+
+{% if quiz_list or peut_gerer %}
+    <div class="section-head">
+        <h2 class="section-title">Évaluations du cours</h2>
+        {% if peut_gerer %}<a href="{% url 'quizzes:quiz_creer' %}?cours={{ cours.pk }}" class="btn btn-outline">Créer un quiz pour ce cours</a>{% endif %}
+    </div>
+    {% if quiz_list %}
+    {% for quiz in quiz_list %}
+        <article class="card" style="margin-bottom:1rem;">
+            <h3>{{ quiz.titre }}{% if not quiz.est_publie %} <span class="badge badge-orange">Non publié</span>{% endif %}</h3>
+            {% if quiz.description %}<p>{{ quiz.description }}</p>{% endif %}
+            <a href="{% url 'quizzes:quiz_detail' quiz.pk %}" class="btn btn-outline">Voir l’évaluation</a>
+        </article>
+    {% endfor %}
+    {% elif peut_gerer %}
+        <div class="card empty-state"><p class="muted">Aucun quiz n’est encore associé à ce cours.</p></div>
+    {% endif %}
+{% endif %}
+{% endblock %}
