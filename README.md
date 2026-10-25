@@ -338,6 +338,55 @@ et un service séparé pour les rappels (`SKILLFORGE_PROCESSUS=rappels`, sans `S
 
 ## Structure
 
+### Cours structurés en leçons
+
+L'application `apps.courses` conserve `Cours` et `Module` (le chapitre historique) afin de préserver les cours existants. La hiérarchie est `Cours → Module/chapitre → Lesson → LessonContent`. `Inscription` conserve le pourcentage du cours et la dernière leçon consultée ; `LessonProgress` enregistre l'état, le début, la dernière consultation et la fin de chaque leçon. `Cours` contient désormais slug, catégorie, objectifs, niveau, durée, couverture et ordre. Les blocs prennent en charge texte échappé, code, vidéo, image, document, PDF et lien. DOC/DOCX sont téléchargeables ; l'aperçu intégré est proposé uniquement pour les PDF.
+
+Après mise à jour :
+
+```bash
+venv\Scripts\python manage.py migrate
+venv\Scripts\python manage.py test apps.courses
+```
+
+L'assistant de leçon utilise Gemini API (modèle configurable via `GEMINI_LESSON_MODEL`, par défaut `gemini-3.6-flash`) avec `GEMINI_API_KEY`. La tarification officielle indique une offre gratuite avec quotas limités pour ce modèle ; les quotas peuvent changer et les données envoyées avec l'offre gratuite peuvent être utilisées pour améliorer les produits Google. N'envoyez donc pas de données sensibles. Sans clé ou en cas d'erreur/quota/réseau, l'assistant revient à son modèle local. Il ne transmet que le texte de la leçon et refuse les textes manifestement incohérents.
+
+Pour créer et configurer la clé : connectez-vous à [Google AI Studio](https://aistudio.google.com/app/apikey), choisissez **Create API key**, puis copiez la clé dans le fichier `.env` (pas `.env.example`) à la ligne `GEMINI_API_KEY=...`. Gardez `GEMINI_LESSON_MODEL=gemini-3.6-flash`, enregistrez le fichier et redémarrez Django. Consultez **Dashboard > Usage** dans AI Studio pour voir les quotas. La dépendance `google-genai` est déjà dans `requirements.txt`.
+
+L'assistant local classe sept types de demandes avec scikit-learn puis formule une réponse depuis les textes de la leçon. Le dataset reproductible contient 196 exemples synthétiques sur dix sujets, avec contenu de leçon, question, réponse de référence et difficulté. Les sujets et formulations sont séparés entre entraînement, validation et test. Générez et entraînez son modèle avec :
+
+```bash
+venv\Scripts\python manage.py generate_lesson_ai_dataset
+venv\Scripts\python manage.py train_lesson_ai
+venv\Scripts\python -m apps.courses.ai_assistant.predict "Résume cette leçon"
+```
+
+La dernière commande charge le pipeline sauvegardé et prédit une intention. Au moment de l'entraînement initial, le F1 macro obtenu sur le jeu de test synthétique est 0,80 (accuracy 0,86) ; ces scores ne prédisent pas la qualité sur des demandes réelles. Le rapport complet train/validation/test est affiché par la commande d'entraînement.
+
+Pour insérer un catalogue de démonstration avec cours Python, SQL et Git, leurs chapitres, leçons, exemples de code, inscriptions et progressions :
+
+```bash
+venv\Scripts\python manage.py migrate
+venv\Scripts\python manage.py populate_lms_demo
+```
+
+Cette commande conserve les données existantes et peut être relancée sans créer de doublons. Elle crée aussi les comptes de démonstration SkillForge (`demo_yasmine`, `demo_amine`, `demo_sarra`, mot de passe `SkillForge2026!`) si nécessaire. Ne réinitialisez pas une base réelle avec les commandes de démonstration.
+
+Si le fichier SQLite par défaut est endommagé, utilisez une nouvelle base sans toucher à l'ancienne :
+
+```powershell
+$env:DATABASE_URL = "sqlite:///db_populated.sqlite3"
+venv\Scripts\python manage.py migrate
+venv\Scripts\python manage.py populate_lms_demo
+venv\Scripts\python run.py dev
+```
+
+Les formateurs valides peuvent créer des leçons depuis le détail d'un cours, y ajouter, modifier, supprimer et réordonner les blocs, puis prévisualiser le rendu. Les apprenants inscrits peuvent parcourir les leçons publiées, conserver leurs états en cours/terminés et reprendre depuis la dernière leçon ouverte. La progression globale est calculée sur les seules leçons publiées (et sur les modules historiques pour les cours sans leçons). Les couvertures restent sous `MEDIA_ROOT`; les ressources de leçon sont enregistrées sous `PRIVATE_MEDIA_ROOT/cours/` et servies par une vue authentifiée qui vérifie l'inscription ou les droits de gestion. Les fichiers sont limités à 25 Mo et vérifiés par extension, type MIME déclaré et signatures binaires. DOC/DOCX sont téléchargeables, PDF, images et vidéos compatibles sont servis en ligne.
+
+Les migrations `0003` à `0005` ajoutent la structure des leçons, l'état de progression, les métadonnées et les validations. Elles ne suppriment pas les cours/modules historiques ; le texte existant des modules reste affiché. Les ressources historiques sont déplacées vers le stockage privé quand elles existent. Il n'y a pas de conversion automatique du texte d'un module en une nouvelle leçon.
+
+**Limites** : le texte est rendu en texte brut échappé, sans éditeur HTML riche ; les extraits de code ne sont pas colorés syntaxiquement ; le réordonnancement passe par le champ d'ordre des formulaires, sans glisser-déposer. Le modèle synthétique (196 exemples) classe l'intention ; les réponses restent extractives et ne constituent pas une génération conversationnelle. Les scores synthétiques ne prédisent pas les performances sur des questions réelles.
+
 ```
 SkillForge/
 ├── config/              # paramètres et URLs racine du projet

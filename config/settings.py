@@ -227,6 +227,7 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = PIECE_JOINTE_TAILLE_MAX + 1024 * 1024
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+GEMINI_LESSON_MODEL = os.getenv("GEMINI_LESSON_MODEL", "gemini-3.6-flash")
 # Niveau de réflexion du modèle (minimal, low, medium, high) ; vide pour la valeur par défaut du modèle
 GEMINI_REFLEXION = os.getenv("GEMINI_REFLEXION", "minimal").upper() or None
 MODERATION_IA_ACTIVE = os.getenv("MODERATION_IA_ACTIVE", "True") == "True"

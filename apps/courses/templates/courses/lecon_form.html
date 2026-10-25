@@ -1,0 +1,17 @@
+{% extends "base_app.html" %}
+{% block title %}Gestion de la leçon{% endblock %}
+{% block content %}
+<a class="back-link" href="{% url 'courses:detail' module.cours_id %}">← Retour au cours</a>
+<h1 class="page-title">{% if lecon %}Modifier{% else %}Créer{% endif %} une leçon</h1>
+<form method="post" class="card form form-narrow">{% csrf_token %}
+{% for field in form %}{% include "partials/form_field.html" with field=field %}{% endfor %}
+<button class="btn btn-primary">Enregistrer</button></form>
+{% if lecon %}<section class="card" style="margin-top:1.5rem"><h2>Blocs pédagogiques</h2>
+<ol>{% for bloc in lecon.blocs.all %}<li>{{ bloc.get_type_display }} — {{ bloc.titre|default:bloc.texte|truncatechars:80 }}
+<a href="{% url 'courses:bloc_modifier' bloc.pk %}">Modifier</a>
+<form method="post" action="{% url 'courses:bloc_supprimer' bloc.pk %}" style="display:inline">{% csrf_token %}<button class="btn btn-outline" type="submit">Supprimer</button></form>
+</li>{% empty %}<li>Aucun bloc pour le moment.</li>{% endfor %}</ol>
+<a class="btn btn-secondary" href="{% url 'courses:bloc_ajouter' lecon.pk %}">Ajouter un bloc</a>
+<a class="btn btn-secondary" href="{% url 'courses:lecon_lire' lecon.pk %}">Prévisualiser</a>
+<form method="post" action="{% url 'courses:lecon_supprimer' lecon.pk %}" style="margin-top:1rem">{% csrf_token %}<button class="btn btn-outline" type="submit">Supprimer cette leçon</button></form></section>{% endif %}
+{% endblock %}

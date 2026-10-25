@@ -7,7 +7,7 @@
 <h1 class="page-title">{% if creation %}Créer un cours{% else %}Modifier le cours{% endif %}</h1>
 <p class="page-subtitle">Renseignez les informations du cours. Le responsable ne peut pas être changé depuis ce formulaire.</p>
 
-<form method="post" class="card form form-narrow">
+<form method="post" enctype="multipart/form-data" class="card form form-narrow">
     {% csrf_token %}
     {% if form.non_field_errors %}<div class="alert alert-error">{{ form.non_field_errors }}</div>{% endif %}
     {% for field in form %}{% include "partials/form_field.html" with field=field %}{% endfor %}
