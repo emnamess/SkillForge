@@ -44,7 +44,9 @@ def index(request):
     else:
         quiz_list = Quiz.objects.filter(est_publie=True).annotate(
             nb_questions=Count("questions", distinct=True),
-        )
+        ).filter(
+            Q(cours__isnull=True) | Q(cours__inscriptions__apprenant=request.user)
+        ).distinct()
         template = "quizzes/index_apprenant.html"
 
     return render(request, template, {"quiz_list": quiz_list})
@@ -64,7 +66,7 @@ def _get_quiz_formateur_ou_admin(request, pk):
 @role_required(User.Role.FORMATEUR)
 def quiz_creer(request):
     if request.method == "POST":
-        form = QuizForm(request.POST)
+        form = QuizForm(request.POST, formateur=request.user)
         if form.is_valid():
             quiz = form.save(commit=False)
             quiz.formateur = request.user
@@ -72,13 +74,20 @@ def quiz_creer(request):
             messages.success(request, f"Quiz « {quiz.titre} » créé. Ajoutez maintenant des questions.")
             return redirect("quizzes:questions_gerer", pk=quiz.pk)
     else:
-        form = QuizForm()
+        form = QuizForm(
+            initial={"cours": request.GET.get("cours")},
+            formateur=request.user,
+        )
     return render(request, "quizzes/quiz_form.html", {"form": form, "creation": True})
 
 
 @login_required
 def quiz_detail(request, pk):
     quiz = get_object_or_404(Quiz, pk=pk)
+    if request.user.est_apprenant and quiz.cours_id and not quiz.cours.inscriptions.filter(
+        apprenant=request.user
+    ).exists():
+        raise Http404
     # Un quiz non publié n'est visible que par son formateur
     if not quiz.est_publie and quiz.formateur != request.user and not request.user.est_administrateur:
         raise Http404
@@ -102,13 +111,13 @@ def quiz_detail(request, pk):
 def quiz_modifier(request, pk):
     quiz = _get_quiz_formateur_ou_admin(request, pk)
     if request.method == "POST":
-        form = QuizForm(request.POST, instance=quiz)
+        form = QuizForm(request.POST, instance=quiz, formateur=request.user)
         if form.is_valid():
             form.save()
             messages.success(request, "Quiz mis à jour.")
             return redirect("quizzes:quiz_detail", pk=quiz.pk)
     else:
-        form = QuizForm(instance=quiz)
+        form = QuizForm(instance=quiz, formateur=request.user)
     return render(request, "quizzes/quiz_form.html", {"form": form, "quiz": quiz, "creation": False})
 
 
@@ -266,6 +275,11 @@ def passer_quiz(request, pk):
     else:
         quiz = get_object_or_404(Quiz, pk=pk, est_publie=True)
 
+    if request.user.est_apprenant and quiz.cours_id and not quiz.cours.inscriptions.filter(
+        apprenant=request.user
+    ).exists():
+        raise Http404
+
     questions = quiz.questions.prefetch_related("choix").all()
 
     if not questions.exists():
@@ -294,6 +308,18 @@ def passer_quiz(request, pk):
 
         # Corriger la tentative (QCM + IA)
         corriger_tentative(tentative)
+
+        if request.user.est_apprenant and quiz.cours_id:
+            from apps.courses.models import Inscription
+            from apps.courses.services import delivrer_certificat_si_eligible
+
+            inscription = Inscription.objects.filter(
+                apprenant=request.user, cours_id=quiz.cours_id
+            ).select_related("apprenant", "cours").first()
+            if inscription:
+                certificat = delivrer_certificat_si_eligible(inscription)
+                if certificat:
+                    messages.success(request, "Votre certificat de cours est maintenant disponible.")
 
         messages.success(request, "Quiz terminé ! Voici vos résultats.")
         return redirect("quizzes:tentative_detail", pk=tentative.pk)

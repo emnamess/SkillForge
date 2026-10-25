@@ -1,0 +1,17 @@
+{% extends "base_app.html" %}
+
+{% block title %}Supprimer {{ module.titre }}{% endblock %}
+
+{% block content %}
+<a href="{% url 'courses:detail' module.cours_id %}" class="back-link">← Retour au cours</a>
+<div class="card form-narrow">
+    <h1 class="page-title">Supprimer le module</h1>
+    <p>Confirmez-vous la suppression de « {{ module.titre }} » du cours « {{ module.cours.titre }} » ?</p>
+    <p class="muted">Les validations de ce module seront supprimées et les progressions recalculées.</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">Confirmer la suppression</button>
+        <a href="{% url 'courses:detail' module.cours_id %}" class="btn btn-outline">Annuler</a>
+    </form>
+</div>
+{% endblock %}

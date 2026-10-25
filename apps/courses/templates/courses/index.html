@@ -1,8 +1,74 @@
 {% extends "base_app.html" %}
 
-{% block title %}Cours et modules{% endblock %}
+{% block title %}Catalogue des cours{% endblock %}
 
 {% block content %}
-<h1 class="page-title">Cours et modules</h1>
-<p class="page-subtitle">Module en cours de développement.</p>
+<div class="page-head">
+    <div>
+        <h1 class="page-title">Catalogue des cours</h1>
+        <p class="page-subtitle">
+            {% if user.est_administrateur %}Tous les cours de la plateforme.{% elif user.est_formateur %}Cours publiés et vos brouillons.{% else %}Découvrez les cours publiés par nos formateurs.{% endif %}
+        </p>
+    </div>
+    <div class="page-head-actions">
+        {% if est_apprenant %}<a href="{% url 'courses:mes_cours' %}" class="btn btn-outline">Mes cours</a>{% endif %}
+        {% if peut_creer %}<a href="{% url 'courses:cours_creer' %}" class="btn btn-primary">Créer un cours</a>{% endif %}
+    </div>
+</div>
+
+{% if page.object_list %}
+    <div>
+        {% for cours in page %}
+            <article class="card" style="margin-bottom:1rem;">
+                <h2>{{ cours.titre }}{% if not cours.est_publie %} <span class="badge badge-orange">Brouillon</span>{% endif %}</h2>
+                {% if cours.description %}
+                    <p>{{ cours.description|truncatechars:180 }}</p>
+                {% else %}
+                    <p class="muted">Aucune description disponible.</p>
+                {% endif %}
+                <p class="muted">Formateur : {{ cours.formateur.get_full_name|default:cours.formateur.username }}</p>
+                <div class="page-head-actions">
+                    <a href="{% url 'courses:detail' cours.pk %}" class="btn btn-outline">Voir le cours</a>
+                    {% if user.est_administrateur or user.pk == cours.formateur_id and not user.en_attente_validation %}
+                        <a href="{% url 'courses:cours_modifier' cours.pk %}" class="btn btn-outline">Modifier</a>
+                    {% endif %}
+                    {% if est_apprenant and cours.est_publie %}
+                        {% if cours.pk in cours_inscrits %}
+                            <span class="badge badge-green">Déjà inscrit</span>
+                        {% else %}
+                            <form method="post" action="{% url 'courses:inscrire' cours.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-primary">S’inscrire</button>
+                            </form>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </article>
+        {% endfor %}
+    </div>
+
+    {% if page.has_other_pages %}
+        <nav class="pagination" aria-label="Pagination du catalogue">
+            {% if page.has_previous %}
+                <a href="?page={{ page.previous_page_number }}" class="btn btn-sm btn-outline">Précédent</a>
+            {% endif %}
+            <span>Page {{ page.number }} sur {{ page.paginator.num_pages }}</span>
+            {% if page.has_next %}
+                <a href="?page={{ page.next_page_number }}" class="btn btn-sm btn-outline">Suivant</a>
+            {% endif %}
+        </nav>
+    {% endif %}
+{% else %}
+    <div class="card empty-state">
+        {% if user.est_administrateur %}
+            <h2>Aucun cours n’est encore enregistré</h2>
+        {% elif user.est_formateur %}
+            <h2>Aucun cours accessible pour le moment</h2>
+            <p class="muted">Les cours publiés et vos brouillons apparaîtront ici.</p>
+        {% else %}
+            <h2>Aucun cours publié pour le moment</h2>
+            <p class="muted">Revenez bientôt : les formateurs préparent de nouveaux cours.</p>
+        {% endif %}
+    </div>
+{% endif %}
 {% endblock %}
