@@ -21,6 +21,7 @@ htmlcov/
 
 # Secrets
 .env
+COMPTES.md
 
 # IDE / OS
 .vscode/

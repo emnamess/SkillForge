@@ -55,11 +55,11 @@ DJANGO_APPS = [
 # Un module par membre de l'équipe
 LOCAL_APPS = [
     "apps.accounts",       # Utilisateurs et rôles
-    "apps.courses",        # Emna Ben Miled — cours et modules
-    "apps.quizzes",        # Mariem Ferjani — quiz et correction IA
-    "apps.mentoring",      # Saif Tannoubi — mentorat et séances
-    "apps.certificates",   # Mohamed Karim Kebaili — certificats et statistiques
-    "apps.notifications",  # Emna Messaoudi — notifications et messagerie
+    "apps.courses",        # Cours et modules
+    "apps.quizzes",        # Quiz et correction IA
+    "apps.mentoring",      # Mentorat et séances
+    "apps.certificates",   # Certificats et statistiques
+    "apps.notifications",  # Notifications et messagerie
     "apps.careers",        # Insertion professionnelle — offres, candidatures, recruteurs
 ]
 
