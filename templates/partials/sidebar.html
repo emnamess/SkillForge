@@ -12,7 +12,6 @@
             <a href="{% url 'careers:tableau_recruteur' %}" class="{% if current == 'careers' and page != 'mes_offres' %}active{% endif %}">Espace recruteur</a>
             <a href="{% url 'careers:mes_offres' %}" class="{% if page == 'mes_offres' %}active{% endif %}">Mes offres</a>
         {% else %}
-        <a href="{% url 'courses:index' %}" class="{% if current == 'courses' %}active{% endif %}">{% if user.est_formateur %}Mes cours{% else %}Catalogue{% endif %}</a>
         <a href="{% url 'quizzes:index' %}" class="{% if current == 'quizzes' %}active{% endif %}">{% if user.est_formateur %}Quiz IA{% else %}Mes quiz{% endif %}</a>
         <a href="{% url 'mentoring:index' %}" class="{% if current == 'mentoring' %}active{% endif %}">Mentorat</a>
         <a href="{% url 'certificates:index' %}" class="{% if current == 'certificates' and page != 'statistiques' and page != 'performance_recommandations' %}active{% endif %}">{% if user.est_apprenant %}Certificats{% else %}Progression{% endif %}</a>
