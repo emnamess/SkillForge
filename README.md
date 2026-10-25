@@ -58,6 +58,7 @@ Il utilise automatiquement le Python du `venv` : **pas besoin d'activer l'enviro
 | `python run.py shell` | Ouvre un shell Python avec Django chargé |
 | `python run.py rappels` | Envoie les rappels de séances dus |
 | `python run.py clean` | Supprime les dossiers `__pycache__` |
+| `python run.py production` | Démarrage sur le serveur (voir [Déploiement](#déploiement-railway)) — pas en local |
 
 ### Comptes de démo
 
@@ -292,6 +293,63 @@ ait assez de données ; à remplacer par les vraies données quand le module Cou
 ```bash
 python run.py couverture apps.certificates   # tests + rapport dans le terminal et dans htmlcov/index.html
 ```
+
+## Déploiement (Railway)
+
+SkillForge est hébergé sur [Railway](https://railway.com), qui fait tourner le projet comme en local :
+Daphne (HTTP + WebSockets), un processus pour les rappels, PostgreSQL, Redis et un disque pour les fichiers déposés.
+**En local, rien ne change** : sans ces variables, le projet utilise SQLite et `python run.py dev`.
+
+### Architecture
+
+| Service Railway | Rôle | Variables propres |
+|---|---|---|
+| `web` (dépôt GitHub) | Site + WebSockets ; applique les migrations à chaque démarrage | `SKILLFORGE_PROCESSUS=web`, volume monté sur `/data` |
+| `rappels` (même dépôt) | Envoie les rappels de séances chaque minute | `SKILLFORGE_PROCESSUS=rappels` |
+| `Postgres` | Base de données | — |
+| `Redis` | Relie les deux processus : un rappel envoyé par `rappels` s'affiche en direct dans le navigateur | — |
+
+Les deux services utilisent `railway.json` (commande `python run.py production`) ; c'est `SKILLFORGE_PROCESSUS` qui choisit le rôle.
+
+### Mise en place (une fois)
+
+1. Sur railway.com : **New Project → Deploy from GitHub repo → SkillForge**. Ce premier service sera `web`.
+2. Dans le projet : **+ Create → Database → PostgreSQL**, puis **+ Create → Database → Redis**.
+3. Service `web` → **Settings → Networking → Generate Domain** (adresse publique en `.up.railway.app`).
+4. Service `web` → clic droit → **Attach volume**, point de montage `/data`.
+5. Service `web` → **Variables** (la syntaxe `${{...}}` référence les autres services) :
+
+   | Variable | Valeur |
+   |---|---|
+   | `DJANGO_DEBUG` | `False` |
+   | `DJANGO_SECRET_KEY` | une longue clé aléatoire (`python -c "import secrets; print(secrets.token_urlsafe(50))"`) |
+   | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
+   | `REDIS_URL` | `${{Redis.REDIS_URL}}` |
+   | `DJANGO_DATA_DIR` | `/data` |
+   | `SKILLFORGE_PROCESSUS` | `web` |
+   | `GEMINI_API_KEY` | la clé Gemini (facultatif : sans clé, les règles locales modèrent) |
+   | `DJANGO_EMAIL_BACKEND`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | facultatif : sans eux, les e-mails s'affichent dans les journaux |
+
+   Le domaine public est détecté automatiquement (`RAILWAY_PUBLIC_DOMAIN`) : inutile de remplir
+   `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS` ou `DJANGO_SITE_URL`, sauf pour un nom de domaine personnalisé.
+6. Créer le service des rappels : **+ Create → GitHub Repo → SkillForge** (même dépôt), le renommer `rappels`,
+   et lui donner les mêmes variables **sauf** `SKILLFORGE_PROCESSUS=rappels` (pas de domaine ni de volume).
+7. Créer l'administrateur depuis la [CLI Railway](https://docs.railway.com/guides/cli) :
+   ```bash
+   railway link              # choisir le projet SkillForge
+   railway ssh --service web
+   python manage.py createsuperuser
+   ```
+   Données de démo (facultatif, mot de passe public : à ne faire que pour une démonstration) :
+   `python manage.py creer_demo --force` puis `python manage.py seed_carriere_demo --force`.
+
+### Au quotidien
+
+- Chaque fusion dans `main` redéploie automatiquement les deux services ; les migrations sont appliquées au démarrage de `web`.
+- Journaux : service → **Deployments → View logs** (erreurs, décisions de modération, rappels envoyés).
+- Les fichiers déposés (pièces jointes, CV, logos) et `logs/moderation.log` sont sur le volume `/data` : ils survivent aux redéploiements.
+- Envoi d'e-mails : selon l'offre Railway, le SMTP sortant peut être bloqué ; dans ce cas, utiliser un service d'envoi
+  par API (Brevo, Resend…) ou laisser les e-mails dans les journaux. Les notifications dans le site fonctionnent dans tous les cas.
 
 ## Structure
 

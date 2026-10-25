@@ -129,6 +129,27 @@ def rappels(args):
         pass
 
 
+def production(args):
+    """Démarrage sur le serveur (Railway) : SKILLFORGE_PROCESSUS=web (défaut) ou rappels."""
+    # Pas de venv sur le serveur : on utilise le Python courant
+    python = sys.executable
+    processus = os.getenv("SKILLFORGE_PROCESSUS", "web")
+    if processus == "rappels":
+        info("Envoi des rappels de séances (chaque minute)")
+        os.execv(python, [python, "manage.py", "envoyer_rappels", "--boucle"])
+    if processus != "web":
+        erreur(f"SKILLFORGE_PROCESSUS inconnu : {processus} (attendu : web ou rappels)")
+
+    info("Application des migrations")
+    executer(python, "manage.py", "migrate", "--noinput")
+    info("Collecte des fichiers statiques")
+    executer(python, "manage.py", "collectstatic", "--noinput", "--verbosity", "0")
+    port = os.getenv("PORT", "8000")
+    info(f"Serveur Daphne (HTTP + WebSockets) sur le port {port}")
+    # execv : Daphne remplace ce processus et reçoit directement les signaux d'arrêt de Railway
+    os.execv(python, [python, "-m", "daphne", "-b", "0.0.0.0", "-p", port, "config.asgi:application"])
+
+
 def test(args):
     """Lance les tests (ex. : python run.py test apps.accounts)."""
     manage("test", *args)
@@ -232,6 +253,7 @@ COMMANDES = {
     "dev": dev,
     "serveur": serveur,
     "rappels": rappels,
+    "production": production,
     "test": test,
     "couverture": couverture,
     "check": check,

@@ -4,7 +4,12 @@ python-dotenv>=1.0
 # Temps réel (WebSockets)
 channels>=4.2
 daphne>=4.1
-# channels-redis>=4.2   # uniquement si REDIS_URL est utilisé (production)
+channels-redis>=4.2   # utilisé seulement si REDIS_URL est défini (production)
+
+# Production (Railway) : PostgreSQL via DATABASE_URL, fichiers statiques
+dj-database-url>=2.2
+psycopg[binary]>=3.2
+whitenoise>=6.7
 
 # Modération IA (Google Gemini)
 google-genai>=1.0
