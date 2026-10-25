@@ -1,0 +1,10 @@
+{# Usage : {% include "careers/partials/frise.html" with historique=candidature.historique.all %} #}
+<ol class="frise">
+    {% for h in historique %}
+        <li>
+            <strong>{% if h.ancien_statut == h.nouveau_statut %}Entretien replanifié{% elif not h.ancien_statut %}Candidature envoyée{% else %}{{ h.get_nouveau_statut_display }}{% endif %}</strong>
+            <small>{{ h.date|date:"d/m/Y à H:i" }}{% if h.auteur and h.ancien_statut %} · par {{ h.auteur }}{% endif %}</small>
+            {% if h.commentaire %}<blockquote>« {{ h.commentaire }} »</blockquote>{% endif %}
+        </li>
+    {% endfor %}
+</ol>

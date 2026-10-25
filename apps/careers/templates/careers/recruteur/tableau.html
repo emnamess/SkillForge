@@ -1,0 +1,72 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Espace recruteur{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/careers.css' %}">{% endblock %}
+
+{% block content %}
+<div class="page-entete">
+    <div>
+        <h1 class="page-title">Espace recruteur · {{ request.entreprise }}</h1>
+        <p class="page-subtitle">Vos offres, les nouvelles candidatures et vos prochains entretiens.</p>
+    </div>
+    <a href="{% url 'careers:offre_creer' %}" class="btn btn-primary">Publier une offre</a>
+</div>
+
+<div class="stats">
+    <a class="stat card" href="{% url 'careers:mes_offres' %}?statut=publiee"><strong>{{ nb_offres_actives }}</strong><span>Offres actives</span></a>
+    <div class="stat card{% if nb_nouvelles %} stat-alert{% endif %}"><strong>{{ nb_nouvelles }}</strong><span>Nouvelles candidatures</span></div>
+    <div class="stat card"><strong>{{ entretiens|length }}</strong><span>Entretiens à venir</span></div>
+    <a class="stat card" href="{% url 'careers:mes_offres' %}?statut=brouillon"><strong>{{ nb_brouillons }}</strong><span>Brouillons</span></a>
+</div>
+
+<div class="grid-2-1">
+    <div>
+        <div class="card table-card">
+            <table class="table">
+                <thead><tr><th>Offre active</th><th>Candidatures</th><th class="text-right">Actions</th></tr></thead>
+                <tbody>
+                {% for offre in offres_actives %}
+                    <tr>
+                        <td><strong>{{ offre.titre }}</strong><br><small class="muted">{{ offre.get_type_contrat_display }} · {{ offre.ville }}{% if offre.date_limite %} · jusqu'au {{ offre.date_limite|date:"d/m/Y" }}{% endif %}</small></td>
+                        <td>{{ offre.nb_candidatures }}</td>
+                        <td class="actions"><a href="{% url 'careers:kanban' offre.pk %}" class="btn btn-sm btn-primary">Candidats</a></td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="3" class="empty">Aucune offre active. <a href="{% url 'careers:offre_creer' %}">Publiez votre première offre</a>.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section-titre"><h2>Nouvelles candidatures</h2></div>
+        <div class="card table-card">
+            <table class="table">
+                <tbody>
+                {% for c in nouvelles_candidatures %}
+                    <tr>
+                        <td><div class="user-cell"><span class="avatar">{{ c.apprenant.initiales }}</span><div><strong>{{ c.apprenant }}</strong><small>{{ c.offre.titre }}</small></div></div></td>
+                        <td>{% if c.score_au_depot is not None %}{{ c.score_au_depot }} %{% endif %}</td>
+                        <td>{{ c.date_creation|date:"d/m/Y" }}</td>
+                        <td class="actions"><a href="{% url 'careers:fiche_candidat' c.pk %}" class="btn btn-sm btn-outline">Voir</a></td>
+                    </tr>
+                {% empty %}
+                    <tr><td class="empty">Aucune nouvelle candidature.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <aside class="card">
+        <h2>Entretiens à venir</h2>
+        {% for c in entretiens %}
+            <p><strong>{{ c.date_entretien|date:"D j M · H:i" }}</strong><br>
+                <a href="{% url 'careers:fiche_candidat' c.pk %}">{{ c.apprenant }}</a> · {{ c.offre.titre }}<br>
+                <small class="muted">{{ c.lieu_ou_lien_entretien }}</small></p>
+        {% empty %}
+            <p class="muted">Aucun entretien planifié.</p>
+        {% endfor %}
+    </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Candidats · {{ offre.titre }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/careers.css' %}">{% endblock %}
+
+{% block content %}
+<a href="{% url 'careers:mes_offres' %}" class="back-link">← Mes offres</a>
+<div class="page-entete">
+    <div>
+        <h1 class="page-title">{{ offre.titre }}</h1>
+        <p class="page-subtitle">Glissez une carte vers une autre colonne, ou utilisez le menu « Changer le statut » de chaque carte. Candidats triés par compatibilité.</p>
+    </div>
+    <a href="{{ offre.get_absolute_url }}" class="btn btn-outline">Voir l'offre</a>
+</div>
+
+<div class="kanban-message" data-kanban-message aria-live="polite"></div>
+
+<div class="kanban" data-kanban>
+    {% for statut, cartes in colonnes %}
+        <section class="kanban-colonne" data-statut="{{ statut.value }}" aria-label="{{ statut.label }}">
+            <h2>{{ statut.label }} <span class="compteur" data-compteur>{{ cartes|length }}</span></h2>
+            {% for c in cartes %}
+                <article class="card kanban-carte" data-carte data-statut="{{ c.statut }}" data-url="{% url 'careers:changer_statut' c.pk %}" data-fiche="{% url 'careers:fiche_candidat' c.pk %}">
+                    <div class="user-cell">
+                        <span class="avatar">{{ c.apprenant.initiales }}</span>
+                        <div>
+                            <a href="{% url 'careers:fiche_candidat' c.pk %}"><strong>{{ c.apprenant }}</strong></a>
+                            <small>Postulé le {{ c.date_creation|date:"d/m/Y" }}</small>
+                        </div>
+                    </div>
+                    <div class="badges">
+                        {% include "careers/partials/score.html" with resultat=c.compatibilite %}
+                        {% if c.statut == "entretien" and c.date_entretien %}<span class="badge badge-muted">{{ c.date_entretien|date:"d/m H:i" }}</span>{% endif %}
+                    </div>
+                    <form method="post" action="{% url 'careers:changer_statut' c.pk %}" data-form-statut {% if not c.statuts_possibles %}hidden{% endif %}>
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <label class="sr-only" for="statut-{{ c.pk }}">Changer le statut de {{ c.apprenant }}</label>
+                        <select name="statut" id="statut-{{ c.pk }}">
+                            {% for s in c.statuts_possibles %}<option value="{{ s.value }}">{{ s.label }}</option>{% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-outline">OK</button>
+                    </form>
+                </article>
+            {% empty %}
+                <p class="kanban-vide" data-vide>Aucun candidat</p>
+            {% endfor %}
+        </section>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/careers.js' %}" defer></script>{% endblock %}

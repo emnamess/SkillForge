@@ -41,6 +41,7 @@ LOCAL_APPS = [
     "apps.mentoring",      # Saif Tannoubi — mentorat et séances
     "apps.certificates",   # Mohamed Karim Kebaili — certificats et statistiques
     "apps.notifications",  # Emna Messaoudi — notifications et messagerie
+    "apps.careers",        # Insertion professionnelle — offres, candidatures, recruteurs
 ]
 
 THIRD_PARTY_APPS = [

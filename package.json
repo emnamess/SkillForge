@@ -16,6 +16,7 @@
     "update": "python run.py update",
     "pull": "python run.py pull",
     "demo": "python run.py demo",
+    "carriere": "python run.py carriere",
     "moderation": "python run.py moderation",
     "logs": "python run.py logs",
     "superuser": "python run.py superuser",

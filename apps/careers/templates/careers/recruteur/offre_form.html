@@ -1,0 +1,49 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}{% if offre %}Modifier l'offre{% else %}Nouvelle offre{% endif %}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/careers.css' %}">{% endblock %}
+
+{% block content %}
+<a href="{% url 'careers:mes_offres' %}" class="back-link">← Mes offres</a>
+<h1 class="page-title">{% if offre %}Modifier « {{ offre.titre }} »{% else %}Nouvelle offre{% endif %}</h1>
+<p class="page-subtitle">Les compétences requises servent à calculer la compatibilité de chaque candidat.</p>
+
+<form method="post" class="form card" novalidate>
+    {% csrf_token %}
+    {% for error in form.non_field_errors %}<div class="alert alert-error">{{ error }}</div>{% endfor %}
+    {% include "partials/form_field.html" with field=form.titre %}
+    <div class="form-row">
+        {% include "partials/form_field.html" with field=form.type_contrat %}
+        {% include "partials/form_field.html" with field=form.mode_travail %}
+    </div>
+    <div class="form-row">
+        {% include "partials/form_field.html" with field=form.ville %}
+        {% include "partials/form_field.html" with field=form.remuneration %}
+    </div>
+    {% include "partials/form_field.html" with field=form.date_limite %}
+    {% include "partials/form_field.html" with field=form.description %}
+
+    <h2 class="avec-marge">Compétences requises</h2>
+    <p class="muted">Une compétence obligatoire pèse deux fois plus dans le score.</p>
+    {{ formset.management_form }}
+    {% for error in formset.non_form_errors %}<div class="alert alert-error">{{ error }}</div>{% endfor %}
+    {% for f in formset %}
+        {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
+        {% for error in f.non_field_errors %}<div class="alert alert-error">{{ error }}</div>{% endfor %}
+        <div class="formset-ligne">
+            {% include "partials/form_field.html" with field=f.competence %}
+            {% include "partials/form_field.html" with field=f.niveau_requis %}
+            <div>
+                <label class="supprimer">{{ f.obligatoire }} Obligatoire</label>
+                {% if f.instance.pk %}<label class="supprimer">{{ f.DELETE }} Retirer</label>{% endif %}
+            </div>
+        </div>
+    {% endfor %}
+
+    <div class="actions">
+        <button type="submit" name="enregistrer" class="btn btn-outline">Enregistrer</button>
+        {% if not offre or offre.statut != "publiee" %}<button type="submit" name="publier" class="btn btn-primary">Enregistrer et publier</button>{% endif %}
+    </div>
+</form>
+{% endblock %}

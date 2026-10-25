@@ -187,6 +187,11 @@ def demo(args):
     manage("creer_demo", *args)
 
 
+def carriere(args):
+    """Crée les données de démo de l'Espace Carrière (entreprises, offres, candidatures)."""
+    manage("seed_carriere_demo", *args)
+
+
 def moderation(args):
     """Teste la modération : Gemini et règles locales côte à côte (ex. : python run.py moderation "texte")."""
     manage("tester_moderation", *args)
@@ -235,6 +240,7 @@ COMMANDES = {
     "update": update,
     "pull": pull,
     "demo": demo,
+    "carriere": carriere,
     "moderation": moderation,
     "logs": logs,
     "superuser": superuser,

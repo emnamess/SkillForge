@@ -1,0 +1,136 @@
+{% extends user.is_authenticated|yesno:"base_app.html,base.html" %}
+{% load static carriere %}
+
+{% block title %}{{ offre.titre }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/careers.css' %}">{% endblock %}
+
+{% block content %}
+<div class="{% if not user.is_authenticated %}carriere-public{% endif %}">
+<a href="{% url 'careers:offres' %}" class="back-link">← Toutes les offres</a>
+
+<div class="grid-2-1">
+    <article class="card">
+        <div class="carte-offre-entete">
+            <div class="user-cell">
+                {% include "careers/partials/logo.html" with entreprise=offre.entreprise %}
+                <div>
+                    <h1 class="page-title">{{ offre.titre }}</h1>
+                    <p class="muted sans-marge">{{ offre.entreprise }} · {{ offre.entreprise.secteur }}</p>
+                </div>
+            </div>
+            {% if offre.statut_effectif != "publiee" %}<span class="badge badge-orange">{{ offre.get_statut_effectif_display }}</span>{% endif %}
+        </div>
+
+        <div class="offre-meta">
+            <div><small>Contrat</small><strong>{{ offre.get_type_contrat_display }}</strong></div>
+            <div><small>Mode</small><strong>{{ offre.get_mode_travail_display }}</strong></div>
+            <div><small>Ville</small><strong>{{ offre.ville }}</strong></div>
+            {% if offre.remuneration %}<div><small>Rémunération</small><strong>{{ offre.remuneration }}</strong></div>{% endif %}
+            <div><small>Date limite</small><strong>{{ offre.date_limite|date:"d/m/Y"|default:"Non précisée" }}</strong></div>
+        </div>
+
+        <h2>Description du poste</h2>
+        <div class="description">{{ offre.description }}</div>
+
+        <h2>Compétences demandées</h2>
+        {% with exigences=offre.competences_requises.all %}
+            {% if exigences %}
+                <ul class="ecart-liste">
+                    {% for e in exigences %}
+                        <li>
+                            <span>{{ e.competence }} {% if e.obligatoire %}<span class="badge badge-indigo">obligatoire</span>{% endif %}</span>
+                            <span class="ecart-niveaux">{{ e.get_niveau_requis_display }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="muted">Aucune compétence précise n'est demandée.</p>
+            {% endif %}
+        {% endwith %}
+
+        {% if offre.entreprise.description %}
+            <h2>À propos de {{ offre.entreprise }}</h2>
+            <p class="description">{{ offre.entreprise.description }}</p>
+            {% if offre.entreprise.site_web %}<a href="{{ offre.entreprise.site_web }}" target="_blank" rel="noopener noreferrer">{{ offre.entreprise.site_web }}</a>{% endif %}
+        {% endif %}
+    </article>
+
+    <aside class="colonne-laterale">
+        {% if not user.is_authenticated %}
+            <div class="card">
+                <h2>Intéressé·e ?</h2>
+                <p class="muted">Connecte-toi pour voir ta compatibilité avec cette offre et postuler.</p>
+                <a href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}" class="btn btn-primary btn-block">Se connecter pour postuler</a>
+                <p class="auth-switch">Pas encore de compte ? <a href="{% url 'accounts:inscription' %}">S'inscrire</a></p>
+            </div>
+
+        {% elif user.est_apprenant %}
+            <div class="card">
+                {% jauge compatibilite %}
+                <h2 class="avec-marge">Écart de compétences</h2>
+                {% include "careers/partials/ecart.html" with ecarts=ecarts %}
+                <p><a href="{% url 'careers:profil' %}">Mettre à jour mes compétences</a></p>
+            </div>
+
+            <div class="card">
+                {% if candidature %}
+                    <h2>Ta candidature</h2>
+                    <p>{% include "careers/partials/statut.html" %} depuis le {{ candidature.date_maj|date:"d/m/Y" }}</p>
+                    <a href="{{ candidature.get_absolute_url }}" class="btn btn-outline btn-block">Suivre ma candidature</a>
+                {% elif raison_refus %}
+                    <h2>Postuler</h2>
+                    <p class="muted">{{ raison_refus }}</p>
+                {% else %}
+                    <h2>Postuler</h2>
+                    {% if compatibilite.obligatoires_manquantes %}
+                        <div class="alert alert-warning">Une compétence obligatoire te manque : tu peux quand même postuler.</div>
+                    {% endif %}
+                    {% if not profil_a_un_cv %}
+                        <p class="muted">Astuce : <a href="{% url 'careers:profil' %}#cv">dépose ton CV</a> pour qu'il soit joint à ta candidature.</p>
+                    {% endif %}
+                    <form method="post" action="{% url 'careers:postuler' offre.pk %}" class="form">
+                        {% csrf_token %}
+                        {% include "partials/form_field.html" with field=form.lettre_motivation %}
+                        <button type="submit" class="btn btn-primary btn-block">Postuler</button>
+                    </form>
+                {% endif %}
+            </div>
+
+            {% if offre.est_ouverte %}
+            <details class="card">
+                <summary>Signaler cette offre</summary>
+                <form method="post" action="{% url 'careers:signaler_offre' offre.pk %}" class="form">
+                    {% csrf_token %}
+                    {% include "partials/form_field.html" with field=form_signalement.motif %}
+                    {% include "partials/form_field.html" with field=form_signalement.details %}
+                    <button type="submit" class="btn btn-outline btn-block">Envoyer le signalement</button>
+                </form>
+            </details>
+            {% endif %}
+
+        {% elif proprietaire %}
+            <div class="card">
+                <h2>Votre offre</h2>
+                <p>Statut : <strong>{{ offre.get_statut_effectif_display }}</strong></p>
+                <a href="{% url 'careers:kanban' offre.pk %}" class="btn btn-primary btn-block">Voir les candidats</a>
+                <p><a href="{% url 'careers:offre_modifier' offre.pk %}">Modifier l'offre</a></p>
+            </div>
+
+        {% elif user.est_administrateur %}
+            <div class="card">
+                <h2>Modération</h2>
+                {% if offre.statut != "suspendue" %}
+                    <form method="post" action="{% url 'careers:admin_suspendre_offre' offre.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button type="submit" class="btn btn-outline btn-block">Suspendre l'offre</button>
+                    </form>
+                {% else %}
+                    <p class="muted">Cette offre est suspendue.</p>
+                {% endif %}
+            </div>
+        {% endif %}
+    </aside>
+</div>
+</div>
+{% endblock %}

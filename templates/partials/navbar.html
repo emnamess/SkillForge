@@ -6,6 +6,7 @@
     <nav class="navbar-links">
         <a href="{% url 'courses:index' %}">Catalogue</a>
         <a href="{% url 'mentoring:index' %}">Mentorat</a>
+        <a href="{% url 'careers:offres' %}">Offres</a>
     </nav>
     <div class="navbar-actions">
         {% if user.is_authenticated %}

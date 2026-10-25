@@ -76,8 +76,8 @@ class Command(BaseCommand):
             if nouveaux:
                 self.creer_conversations(comptes)
                 self.creer_notifications(comptes)
-            self.creer_quiz_demo(comptes)
                 creer_certificats_demo(comptes)
+            self.creer_quiz_demo(comptes)
 
         self.afficher_resume(nouveaux)
 

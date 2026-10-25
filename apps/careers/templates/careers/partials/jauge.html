@@ -1,0 +1,12 @@
+{% load carriere %}
+<div class="jauge {{ score|classe_score }}" role="img" aria-label="{% if score is None %}Compatibilité non calculable{% else %}Compatibilité : {{ score }} %{% endif %}">
+    <div class="jauge-centre">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="fond" cx="60" cy="60" r="{{ rayon }}"></circle>
+            {% if score is not None %}<circle class="valeur" cx="60" cy="60" r="{{ rayon }}" stroke-dasharray="{{ circonference }}" stroke-dashoffset="{{ decalage }}"></circle>{% endif %}
+        </svg>
+        <span class="jauge-texte">{% if score is None %}Non calculable{% else %}{{ score }} %{% endif %}</span>
+    </div>
+    <strong>Compatibilité</strong>
+    {% if resultat.obligatoires_manquantes %}<span class="avertissement">⚠ Une compétence obligatoire te manque</span>{% endif %}
+</div>

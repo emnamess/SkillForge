@@ -1,0 +1,23 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Mes candidatures{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/careers.css' %}">{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Mes candidatures</h1>
+<p class="page-subtitle">Suis l'avancement de chaque candidature, étape par étape.</p>
+
+<div class="candidatures">
+    {% for candidature in page %}
+        {% include "careers/apprenant/carte_candidature.html" %}
+    {% empty %}
+        <div class="card">
+            <p class="muted">Tu n'as pas encore postulé.</p>
+            <a href="{% url 'careers:offres' %}" class="btn btn-primary">Découvrir les offres</a>
+        </div>
+    {% endfor %}
+</div>
+
+{% include "careers/partials/pagination.html" %}
+{% endblock %}
