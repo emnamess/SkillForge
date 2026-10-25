@@ -1,0 +1,12 @@
+{% extends "base_app.html" %}
+{% load static %}
+{% block title %}Planifier une séance · Mentorat{% endblock %}
+{% block content %}
+<h1 class="page-title">Planifier une séance</h1>
+<p class="page-subtitle">{{ disponibilite.debut|date:"l j F Y à H:i" }} – {{ disponibilite.fin|date:"H:i" }} · créneaux de {{ disponibilite.duree_seance }} minutes</p>
+<form method="post" class="card">{% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert-error">{{ form.non_field_errors }}</div>{% endif %}
+    {% for field in form %}{% include "partials/form_field.html" with field=field %}{% endfor %}
+    <div class="page-head-actions"><button class="btn btn-primary" type="submit" {% if not form.fields.debut.choices %}disabled{% endif %}>Planifier la séance</button><a class="btn btn-outline" href="{% url 'mentoring:index' %}">Retour au calendrier</a></div>
+</form>
+{% endblock %}

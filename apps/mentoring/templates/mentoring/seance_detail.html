@@ -1,0 +1,19 @@
+{% extends "base_app.html" %}
+{% block title %}{{ seance.sujet }} · Mentorat{% endblock %}
+{% block content %}
+<h1 class="page-title">{{ seance.sujet }}</h1>
+<p class="page-subtitle"><span class="badge {% if seance.statut == 'confirmee' %}badge-green{% elif seance.statut == 'en_attente' %}badge-orange{% else %}badge-muted{% endif %}">{{ seance.get_statut_display }}</span></p>
+<section class="card">
+    <p><strong>Date :</strong> {{ seance.debut|date:"l j F Y à H:i" }} – {{ seance.fin|date:"H:i" }}</p>
+    <p><strong>Formateur :</strong> {{ seance.formateur.get_full_name|default:seance.formateur.username }}</p>
+    <p><strong>Apprenant :</strong> {{ seance.apprenant.get_full_name|default:seance.apprenant.username }}</p>
+    <p><strong>Sujet :</strong> {{ seance.sujet }}</p>
+    {% if seance.description %}<p>{{ seance.description|linebreaksbr }}</p>{% endif %}
+    {% if seance.lien_visio %}<p><a class="btn btn-primary" href="{{ seance.lien_visio }}" target="_blank" rel="noopener">Rejoindre l’appel vidéo</a></p>{% endif %}
+</section>
+{% if peut_confirmer and seance.statut == 'en_attente' %}<form method="post" action="{% url 'mentoring:seance_action' seance.pk 'confirmer' %}" style="display:inline">{% csrf_token %}<button class="btn btn-primary" type="submit">Confirmer</button></form>{% endif %}
+{% if peut_confirmer and seance.statut == 'confirmee' %}<form method="post" action="{% url 'mentoring:seance_action' seance.pk 'terminer' %}" style="display:inline">{% csrf_token %}<button class="btn btn-outline" type="submit">Marquer terminée</button></form>{% endif %}
+{% if peut_annuler and seance.statut == 'en_attente' or peut_annuler and seance.statut == 'confirmee' %}<form method="post" action="{% url 'mentoring:seance_action' seance.pk 'annuler' %}" style="display:inline">{% csrf_token %}<button class="btn btn-outline" type="submit">Annuler la séance</button></form>{% endif %}
+{% if peut_confirmer and seance.statut == 'confirmee' %}<section class="card" style="margin-top:1.5rem"><h2>Lien de visioconférence</h2><form method="post">{% csrf_token %}<input type="hidden" name="action" value="lien">{% include "partials/form_field.html" with field=lien_form.lien_visio %}<button class="btn btn-primary" type="submit">Enregistrer le lien</button></form></section>{% endif %}
+<p style="margin-top:1rem"><a class="btn btn-outline" href="{% url 'mentoring:index' %}">Retour au mentorat</a></p>
+{% endblock %}

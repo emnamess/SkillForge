@@ -1,8 +1,70 @@
 {% extends "base_app.html" %}
+{% load static %}
 
-{% block title %}Mentorat et séances{% endblock %}
+{% block title %}Calendrier de mentorat{% endblock %}
 
 {% block content %}
-<h1 class="page-title">Mentorat et séances</h1>
-<p class="page-subtitle">Module en cours de développement.</p>
+<link rel="stylesheet" href="{% static 'mentoring/calendar.css' %}">
+<div class="mentoring-heading">
+    <div>
+        <h1 class="page-title">Calendrier de mentorat</h1>
+        <p class="page-subtitle">Consultez les disponibilités et les séances planifiées.</p>
+    </div>
+    {% if peut_publier %}<a class="btn btn-primary" href="{% url 'mentoring:disponibilite_creer' %}">+ Ajouter une disponibilité</a>{% endif %}
+</div>
+
+{% if user.est_apprenant %}
+<form class="calendar-trainer-picker card" method="get" action="{% url 'mentoring:index' %}">
+    <label for="calendar-trainer">Choisissez un formateur pour consulter son calendrier</label>
+    <div class="calendar-trainer-picker-controls">
+        <select id="calendar-trainer" name="formateur" required>
+            <option value="">Sélectionner un formateur</option>
+            {% for formateur in formateurs %}
+                <option value="{{ formateur.pk }}" {% if formateur_selectionne.pk == formateur.pk %}selected{% endif %}>
+                    {{ formateur.get_full_name|default:formateur.username }}{% if formateur.specialite %} · {{ formateur.specialite }}{% endif %}
+                </option>
+            {% endfor %}
+        </select>
+        <button class="btn btn-primary" type="submit">Voir son calendrier</button>
+    </div>
+    {% if not formateurs %}<p class="muted">Aucun formateur n’a encore publié de disponibilité.</p>{% endif %}
+</form>
+{% endif %}
+
+{% if not user.est_apprenant or formateur_selectionne %}
+<section class="mentoring-calendar card" data-events-url="{% url 'mentoring:calendrier_evenements' %}" data-can-manage="{{ peut_publier|yesno:'true,false' }}"{% if formateur_selectionne %} data-trainer-id="{{ formateur_selectionne.pk }}"{% endif %}>
+    <div class="calendar-toolbar">
+        <div class="calendar-navigation">
+            <button class="btn btn-outline calendar-nav" type="button" data-calendar-prev aria-label="Période précédente">‹</button>
+            <button class="btn btn-outline calendar-today" type="button" data-calendar-today>Aujourd’hui</button>
+            <button class="btn btn-outline calendar-nav" type="button" data-calendar-next aria-label="Période suivante">›</button>
+        </div>
+        <h2 class="calendar-title" data-calendar-title aria-live="polite"></h2>
+        <div class="calendar-views" role="group" aria-label="Vue du calendrier">
+            <button class="calendar-view is-active" type="button" data-calendar-view="month">Mois</button>
+            <button class="calendar-view" type="button" data-calendar-view="week">Semaine</button>
+        </div>
+    </div>
+    <div class="calendar-legend" aria-label="Légende">
+        <span><i class="legend-dot is-available"></i>Disponibilité</span>
+        <span><i class="legend-dot is-pending"></i>En attente</span>
+        <span><i class="legend-dot is-confirmed"></i>Confirmée</span>
+        <span><i class="legend-dot is-cancelled"></i>Annulée</span>
+    </div>
+    <div class="calendar-status" data-calendar-status role="status"></div>
+    <div class="calendar-grid" data-calendar-grid aria-label="Calendrier"></div>
+</section>
+{% elif formateurs %}
+<div class="card calendar-select-prompt">Sélectionnez un formateur pour afficher ses disponibilités et les séances que vous avez avec lui.</div>
+{% endif %}
+
+<form class="calendar-csrf" aria-hidden="true">{% csrf_token %}</form>
+<dialog class="calendar-dialog" data-calendar-dialog>
+    <div class="calendar-dialog-head">
+        <h2 data-dialog-title></h2>
+        <button type="button" class="calendar-dialog-close" data-dialog-close aria-label="Fermer">×</button>
+    </div>
+    <div class="calendar-dialog-content" data-dialog-content></div>
+</dialog>
+<script src="{% static 'mentoring/calendar.js' %}" defer></script>
 {% endblock %}

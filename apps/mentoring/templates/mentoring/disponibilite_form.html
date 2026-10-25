@@ -1,0 +1,11 @@
+{% extends "base_app.html" %}
+{% block title %}{% if edition %}Modifier{% else %}Publier{% endif %} une disponibilité · Mentorat{% endblock %}
+{% block content %}
+<h1 class="page-title">{% if edition %}Modifier la disponibilité{% else %}Publier une disponibilité{% endif %}</h1>
+<p class="page-subtitle">Définissez une plage future; elle sera proposée en séances de durée fixe.</p>
+<form method="post" class="card">{% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert-error">{{ form.non_field_errors }}</div>{% endif %}
+    {% for field in form %}{% include "partials/form_field.html" with field=field %}{% endfor %}
+    <div class="page-head-actions"><button class="btn btn-primary" type="submit">{% if edition %}Enregistrer les changements{% else %}Publier{% endif %}</button><a class="btn btn-outline" href="{% url 'mentoring:index' %}">Retour</a></div>
+</form>
+{% endblock %}
