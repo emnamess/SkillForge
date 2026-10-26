@@ -16,10 +16,18 @@
     </div>
 </div>
 
+<form method="get" class="card" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:end;margin-bottom:1.25rem" role="search">
+    <label>Recherche<input type="search" name="q" value="{{ q }}" placeholder="Cours ou formateur"></label>
+    <label>Niveau<select name="niveau"><option value="">Tous les niveaux</option>{% for value,label in niveaux %}<option value="{{ value }}" {% if value == niveau_filtre %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+    <label>Catégorie<select name="categorie"><option value="">Toutes les catégories</option>{% for item in categories %}<option value="{{ item }}" {% if item == categorie_filtre %}selected{% endif %}>{{ item }}</option>{% endfor %}</select></label>
+    <button class="btn btn-primary">Filtrer</button>
+</form>
+
 {% if page.object_list %}
     <div>
         {% for cours in page %}
             <article class="card" style="margin-bottom:1rem;">
+                {% if cours.image_couverture %}<img src="{{ cours.image_couverture.url }}" alt="Couverture du cours {{ cours.titre }}" loading="lazy" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px">{% endif %}
                 <h2>{{ cours.titre }}{% if not cours.est_publie %} <span class="badge badge-orange">Brouillon</span>{% endif %}</h2>
                 {% if cours.description %}
                     <p>{{ cours.description|truncatechars:180 }}</p>
@@ -27,6 +35,8 @@
                     <p class="muted">Aucune description disponible.</p>
                 {% endif %}
                 <p class="muted">Formateur : {{ cours.formateur.get_full_name|default:cours.formateur.username }}</p>
+                <p class="muted">{{ cours.get_niveau_display }}{% if cours.duree_estimee %} · {{ cours.duree_estimee }} h{% endif %}{% if cours.categorie %} · {{ cours.categorie }}{% endif %} · {{ cours.nombre_chapitres }} chapitre{{ cours.nombre_chapitres|pluralize }} · {{ cours.nombre_lecons }} leçon{{ cours.nombre_lecons|pluralize }}</p>
+                {% if est_apprenant and cours.pk in cours_inscrits %}<div class="progress-item-head"><span>Votre progression</span><strong>{{ cours.progression_etudiant }} %</strong></div><span class="progress" role="progressbar" aria-valuenow="{{ cours.progression_etudiant }}" aria-valuemin="0" aria-valuemax="100"><span style="width:{{ cours.progression_etudiant }}%"></span></span>{% endif %}
                 <div class="page-head-actions">
                     <a href="{% url 'courses:detail' cours.pk %}" class="btn btn-outline">Voir le cours</a>
                     {% if user.est_administrateur or user.pk == cours.formateur_id and not user.en_attente_validation %}
@@ -34,7 +44,7 @@
                     {% endif %}
                     {% if est_apprenant and cours.est_publie %}
                         {% if cours.pk in cours_inscrits %}
-                            <span class="badge badge-green">Déjà inscrit</span>
+                            <a href="{% if cours.reprise_lecon %}{% url 'courses:lecon_lire' cours.reprise_lecon.pk %}{% else %}{% url 'courses:detail' cours.pk %}{% endif %}" class="btn btn-primary">Continuer</a>
                         {% else %}
                             <form method="post" action="{% url 'courses:inscrire' cours.pk %}">
                                 {% csrf_token %}
@@ -50,11 +60,11 @@
     {% if page.has_other_pages %}
         <nav class="pagination" aria-label="Pagination du catalogue">
             {% if page.has_previous %}
-                <a href="?page={{ page.previous_page_number }}" class="btn btn-sm btn-outline">Précédent</a>
+                <a href="?q={{ q|urlencode }}&niveau={{ niveau_filtre|urlencode }}&categorie={{ categorie_filtre|urlencode }}&page={{ page.previous_page_number }}" class="btn btn-sm btn-outline">Précédent</a>
             {% endif %}
             <span>Page {{ page.number }} sur {{ page.paginator.num_pages }}</span>
             {% if page.has_next %}
-                <a href="?page={{ page.next_page_number }}" class="btn btn-sm btn-outline">Suivant</a>
+                <a href="?q={{ q|urlencode }}&niveau={{ niveau_filtre|urlencode }}&categorie={{ categorie_filtre|urlencode }}&page={{ page.next_page_number }}" class="btn btn-sm btn-outline">Suivant</a>
             {% endif %}
         </nav>
     {% endif %}

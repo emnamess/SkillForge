@@ -1,12 +1,13 @@
 from django.contrib import admin
+from django import forms
 
-from .models import Cours, Inscription, Module, ProgressionModule
+from .models import Cours, Inscription, Lesson, LessonContent, LessonProgress, Module, ProgressionModule
 
 
 @admin.register(Cours)
 class CoursAdmin(admin.ModelAdmin):
-    list_display = ("titre", "formateur", "est_publie", "date_creation")
-    list_filter = ("est_publie", "date_creation")
+    list_display = ("titre", "formateur", "categorie", "niveau", "est_publie", "date_creation")
+    list_filter = ("est_publie", "niveau", "categorie", "date_creation")
     search_fields = (
         "titre",
         "description",
@@ -67,3 +68,31 @@ class ProgressionModuleAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+class LessonContentInlineForm(forms.ModelForm):
+    class Meta:
+        model = LessonContent
+        fields = "__all__"
+        widgets = {"fichier": forms.FileInput}
+
+
+class LessonContentInline(admin.StackedInline):
+    model = LessonContent
+    form = LessonContentInlineForm
+    extra = 0
+
+
+@admin.register(Lesson)
+class LessonAdmin(admin.ModelAdmin):
+    list_display = ("titre", "module", "ordre", "est_publiee")
+    list_filter = ("est_publiee", "module__cours")
+    search_fields = ("titre", "description", "module__titre", "module__cours__titre")
+    inlines = [LessonContentInline]
+
+
+@admin.register(LessonProgress)
+class LessonProgressAdmin(admin.ModelAdmin):
+    list_display = ("lesson", "inscription", "date_terminaison")
+    list_select_related = ("lesson", "inscription", "inscription__apprenant")
+    readonly_fields = ("lesson", "inscription", "date_terminaison")

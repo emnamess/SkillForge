@@ -4,16 +4,29 @@ from .models import Inscription, Module, ProgressionModule
 
 
 def recalculer_progression(inscription):
-    """Calcule la progression à partir des modules explicitement terminés."""
-    nombre_modules = Module.objects.filter(cours_id=inscription.cours_id).count()
-    if nombre_modules:
-        modules_termines = ProgressionModule.objects.filter(
-            inscription=inscription,
-            module__cours_id=inscription.cours_id,
+    """Calcule à partir des leçons publiées ; conserve le mode historique sinon."""
+    from .models import Lesson, LessonProgress
+
+    cours_lecons = Lesson.objects.filter(module__cours_id=inscription.cours_id)
+    lecons = cours_lecons.filter(est_publiee=True)
+    nombre_lecons = lecons.count()
+    if nombre_lecons:
+        terminees = LessonProgress.objects.filter(
+            inscription=inscription, lesson__in=lecons, etat=LessonProgress.Etat.TERMINEE,
         ).count()
-        progression = (modules_termines * 100) // nombre_modules
+        progression = (terminees * 100) // nombre_lecons
+    elif not cours_lecons.exists():
+        nombre_modules = Module.objects.filter(cours_id=inscription.cours_id).count()
+        if nombre_modules:
+            modules_termines = ProgressionModule.objects.filter(
+                inscription=inscription,
+                module__cours_id=inscription.cours_id,
+            ).count()
+            progression = (modules_termines * 100) // nombre_modules
+        else:
+            progression = 0
     else:
-        # Sans module, aucun contenu n'a pu être explicitement terminé.
+        # Un cours structuré mais sans leçon publiée n'est pas terminé.
         progression = 0
 
     if inscription.progression != progression:

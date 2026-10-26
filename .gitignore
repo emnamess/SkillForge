@@ -10,6 +10,7 @@ env/
 
 # Django
 db.sqlite3
+db_populated.sqlite3
 db.sqlite3-journal
 media/
 private_media/
@@ -18,6 +19,8 @@ staticfiles/
 logs/
 .coverage
 htmlcov/
+apps/courses/ai_assistant/models/*.joblib
+apps/courses/ai_assistant/dataset.csv
 
 # Secrets
 .env
@@ -31,3 +34,10 @@ Thumbs.db
 
 # Node (raccourcis npm)
 node_modules/
+```gitignore
+# Fichiers temporaires locaux
+.tmp_admin/
+adb.sqlite3
+settings_temp_db.py
+apps/courses/test_populate_demo.py
+```

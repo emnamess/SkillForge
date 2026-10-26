@@ -28,6 +28,9 @@
     {% else %}
         <p class="muted">Aucune description disponible.</p>
     {% endif %}
+    <p class="muted">{{ cours.get_niveau_display }}{% if cours.duree_estimee %} · {{ cours.duree_estimee }} h{% endif %}{% if cours.categorie %} · {{ cours.categorie }}{% endif %}</p>
+    {% if cours.image_couverture %}<img src="{{ cours.image_couverture.url }}" alt="Couverture du cours {{ cours.titre }}" style="max-width:100%;max-height:320px;object-fit:cover;border-radius:14px">{% endif %}
+    {% if cours.objectifs %}<h2>Objectifs pédagogiques</h2><div>{{ cours.objectifs|linebreaks }}</div>{% endif %}
     {% if est_apprenant and cours.est_publie %}
         {% if est_inscrit %}
             <p><span class="badge badge-green">Déjà inscrit</span></p>
@@ -41,6 +44,7 @@
         <p class="alert alert-warning">Ce cours n’accepte plus de nouvelles inscriptions. Votre accès et votre progression sont conservés.</p>
     {% endif %}
     {% if inscription %}
+        {% if lecon_reprise %}<p><a class="btn btn-primary" href="{% url 'courses:lecon_lire' lecon_reprise.pk %}">{% if inscription.derniere_lecon_id %}Continuer : {{ lecon_reprise.titre }}{% else %}Commencer le cours{% endif %}</a></p>{% else %}<p class="muted">Aucune leçon publiée pour le moment.</p>{% endif %}
         <div class="progress-item-head">
             <span>Votre progression</span><strong>{{ inscription.progression }} %</strong>
         </div>
@@ -67,7 +71,13 @@
                 {% endif %}
             </div>
             {% if module.contenu %}<div>{{ module.contenu|linebreaks }}</div>{% endif %}
-            {% if inscription %}
+            <h4>Leçons</h4>
+            <ol>{% for lecon in module.lecons.all %}{% if lecon.est_publiee or peut_gerer %}<li>
+                {% if lecon.est_publiee or peut_gerer %}<a href="{% url 'courses:lecon_lire' lecon.pk %}">{{ lecon.titre }}</a>{% else %}{{ lecon.titre }}{% endif %}
+                {% if peut_gerer %}<a class="btn btn-outline" href="{% url 'courses:lecon_modifier' lecon.pk %}">Gérer</a>{% endif %}
+            </li>{% endif %}{% empty %}<li>Aucune leçon{% if peut_gerer %} — <a href="{% url 'courses:lecon_creer' module.pk %}">Ajouter une leçon</a>{% endif %}</li>{% endfor %}</ol>
+            {% if peut_gerer and module.lecons.exists %}<a href="{% url 'courses:lecon_creer' module.pk %}" class="btn btn-outline">Ajouter une leçon</a>{% endif %}
+            {% if inscription and not module.a_lecons_publiees %}
                 {% if module.pk in progression_modules %}
                     <p><span class="badge badge-green">Module terminé</span></p>
                 {% else %}
