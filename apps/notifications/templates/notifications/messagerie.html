@@ -27,6 +27,8 @@
             <div class="discussion-messages" data-discussion
                  data-ws="/ws/messagerie/{{ conversation.pk }}/"
                  data-api="{% url 'notifications:api_messages' conversation.pk %}"
+                 data-url-modifier="{% url 'notifications:message_modifier' 0 %}"
+                 data-url-supprimer="{% url 'notifications:message_supprimer' 0 %}"
                  data-dernier="{{ messages_conversation.last.pk|default:0 }}">
                 {% for m in messages_conversation %}
                     {% ifchanged m.date_envoi.date %}

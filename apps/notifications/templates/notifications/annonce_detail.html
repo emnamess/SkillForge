@@ -1,0 +1,25 @@
+{% extends "base_app.html" %}
+
+{% block title %}{{ annonce.titre }}{% endblock %}
+
+{% block content %}
+<a href="{% url 'notifications:annonces' %}" class="back-link">← Toutes les annonces</a>
+<article class="card annonce-detail{% if annonce.importante %} importante{% endif %}">
+    <div class="annonce-carte-entete">
+        <h1 class="page-title">{{ annonce.titre }}</h1>
+        {% if annonce.importante %}<span class="badge badge-rust">Importante</span>{% endif %}
+    </div>
+    <p class="muted">
+        Publiée le {{ annonce.date_creation|date:"j F Y à H:i" }}{% if annonce.auteur %} par {{ annonce.auteur }}{% endif %}
+        {% if annonce.modifiee %}· modifiée le {{ annonce.date_modification|date:"j F Y à H:i" }}{% endif %}
+        · {{ annonce.get_public_display }}
+    </p>
+    <div class="annonce-contenu">{{ annonce.contenu|linebreaks }}</div>
+    {% if user.est_administrateur %}
+        <div class="form-boutons">
+            <a href="{% url 'notifications:annonce_modifier' annonce.pk %}" class="btn btn-sm btn-outline">Modifier</a>
+            <a href="{% url 'notifications:annonce_supprimer' annonce.pk %}" class="btn btn-sm btn-outline">Supprimer</a>
+        </div>
+    {% endif %}
+</article>
+{% endblock %}

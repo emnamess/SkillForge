@@ -23,9 +23,10 @@
             <a href="{% url 'careers:tableau_apprenant' %}" class="{% if current == 'careers' and page != 'mes_candidatures' and page != 'candidature_detail' %}active{% endif %}">Carrière</a>
             <a href="{% url 'careers:mes_candidatures' %}" class="{% if page == 'mes_candidatures' or page == 'candidature_detail' %}active{% endif %}">Mes candidatures</a>
         {% endif %}
-        <a href="{% url 'notifications:messagerie' %}" class="{% if current == 'notifications' and page != 'index' and page != 'moderation' %}active{% endif %}">
+        <a href="{% url 'notifications:messagerie' %}" class="{% if current == 'notifications' and page != 'index' and page != 'moderation' and 'annonce' not in page %}active{% endif %}">
             Messagerie <span class="pastille" data-compteur-messages {% if not nb_messages_non_lus %}hidden{% endif %}>{{ nb_messages_non_lus }}</span>
         </a>
+        <a href="{% url 'notifications:annonces' %}" class="{% if 'annonce' in page %}active{% endif %}">Annonces</a>
         {% if user.est_administrateur %}
             <a href="{% url 'accounts:utilisateurs' %}" class="{% if page == 'utilisateurs' or page == 'utilisateur_detail' %}active{% endif %}">Utilisateurs</a>
             <a href="{% url 'notifications:moderation' %}" class="{% if page == 'moderation' %}active{% endif %}">

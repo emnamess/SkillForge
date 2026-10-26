@@ -521,3 +521,44 @@ mark { padding: 0 2px; border-radius: 3px; background: var(--orange-soft); color
     .bulle-ligne { max-width: 90%; }
     .entete-page { flex-direction: column; }
 }
+
+
+/* ---------- Messages : modifier / supprimer ---------- */
+
+.bulle-modifie { font-style: italic; }
+.bulle-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 0.2rem;
+    font-size: 0.75rem;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.bulle-ligne:hover .bulle-actions, .bulle-actions:focus-within { opacity: 1; }
+.bulle-actions form { display: inline; }
+.bulle-actions a, .bulle-actions button {
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--muted);
+    font: inherit;
+    cursor: pointer;
+}
+.bulle-actions a:hover, .bulle-actions button:hover { color: var(--indigo); text-decoration: underline; }
+@media (hover: none) { .bulle-actions { opacity: 1; } }
+
+/* ---------- Annonces ---------- */
+
+.annonce-extrait { display: block; margin-top: 0.2rem; color: var(--muted); }
+.annonces-liste { display: flex; flex-direction: column; gap: 0.75rem; }
+.annonce-carte { display: block; color: var(--text); }
+.annonce-carte:hover { border-color: var(--indigo); }
+.annonce-carte p { margin: 0.5rem 0; }
+.annonce-carte-entete { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+.annonce-carte-entete .page-title { margin: 0; }
+.annonce-carte.importante, .annonce-detail.importante { border-left: 4px solid var(--rust); }
+.annonce-detail { max-width: 760px; }
+.annonce-contenu { margin: 1rem 0; line-height: 1.65; overflow-wrap: anywhere; }
+.form-boutons { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.25rem; }
+.form-boutons .btn { margin-top: 0; }

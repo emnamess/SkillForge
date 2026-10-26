@@ -55,6 +55,7 @@ class Notification(models.Model):
         QUIZ = "quiz", "Quiz"
         CERTIFICAT = "certificat", "Certificat"
         COMPTE = "compte", "Compte"
+        ANNONCE = "annonce", "Annonce"
         SYSTEME = "systeme", "SkillForge"
 
     destinataire = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
@@ -126,6 +127,7 @@ class Message(models.Model):
     nom_fichier = models.CharField(max_length=255, blank=True)
     taille_fichier = models.PositiveIntegerField(default=0)
     signale = models.BooleanField(default=False, help_text="Signalé par la modération IA.")
+    modifie_le = models.DateTimeField("modifié le", null=True, blank=True)
     lu = models.BooleanField(default=False)
     date_envoi = models.DateTimeField(auto_now_add=True)
 
@@ -151,6 +153,54 @@ class Message(models.Model):
         if self.contenu:
             return self.contenu
         return f"📎 {self.nom_fichier}" if self.fichier else ""
+
+
+class Annonce(models.Model):
+    """Information publiée par un administrateur auprès d'un public (CRUD dans /notifications/annonces/)."""
+
+    class Public(models.TextChoices):
+        TOUS = "tous", "Tout le monde"
+        APPRENANTS = "apprenant", "Apprenants"
+        FORMATEURS = "formateur", "Formateurs"
+        RECRUTEURS = "recruteur", "Recruteurs"
+        ADMINISTRATEURS = "administrateur", "Administrateurs"
+
+    titre = models.CharField(max_length=150)
+    contenu = models.TextField()
+    public = models.CharField("destinataires", max_length=20, choices=Public.choices, default=Public.TOUS)
+    importante = models.BooleanField("importante", default=False,
+                                     help_text="Envoyée aussi par e-mail et mise en avant.")
+    auteur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+                               related_name="annonces")
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-date_creation"]
+
+    def __str__(self):
+        return self.titre
+
+    def get_absolute_url(self):
+        return reverse("notifications:annonce_detail", args=[self.pk])
+
+    @property
+    def modifiee(self):
+        return (self.date_modification - self.date_creation).total_seconds() > 60
+
+    def destinataires(self):
+        from apps.accounts.models import User
+
+        qs = User.objects.filter(is_active=True)
+        if self.public != self.Public.TOUS:
+            qs = qs.filter(role=self.public)
+        return qs.exclude(pk=self.auteur_id)
+
+    def concerne(self, user):
+        return user.est_administrateur or self.public in (self.Public.TOUS, user.role)
+
+    def notifications(self):
+        return Notification.objects.filter(type=Notification.Type.ANNONCE, lien=self.get_absolute_url())
 
 
 class Signalement(models.Model):

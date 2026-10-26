@@ -52,6 +52,7 @@ def message_en_dict(message):
         "contenu": message.contenu,
         "heure": date_format(localtime(message.date_envoi), "H:i"),
         "signale": message.signale,
+        "modifie": bool(message.modifie_le),
         "fichier": {
             "url": message.url_fichier(),
             "nom": message.nom_fichier,
@@ -87,6 +88,14 @@ def pousser_compteurs(user):
     envoyer_au_groupe(groupe_utilisateur(user.pk), {"type": "compteurs.maj", "compteurs": compteurs(user)})
 
 
+def pousser_compteurs_id(user_id):
+    from apps.accounts.models import User
+
+    user = User.objects.filter(pk=user_id).first()
+    if user:
+        pousser_compteurs(user)
+
+
 def pousser_notification(notification):
     envoyer_au_groupe(groupe_utilisateur(notification.destinataire_id), {
         "type": "notification.nouvelle",
@@ -102,10 +111,17 @@ def diffuser_message(message):
     })
 
 
-def diffuser_suppression(message):
-    """Retire un message des conversations ouvertes (suppression par la modération)."""
+def diffuser_modification(message):
     envoyer_au_groupe(groupe_conversation(message.conversation_id), {
-        "type": "chat.supprime", "id": message.pk,
+        "type": "chat.modifie",
+        "message": message_en_dict(message),
+    })
+
+
+def diffuser_suppression(message, par_auteur=False):
+    """Retire un message des conversations ouvertes (par son auteur ou par la modération)."""
+    envoyer_au_groupe(groupe_conversation(message.conversation_id), {
+        "type": "chat.supprime", "id": message.pk, "par_auteur": par_auteur,
     })
 
 

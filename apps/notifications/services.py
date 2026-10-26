@@ -182,6 +182,93 @@ def envoyer_message(conversation, expediteur, contenu="", fichier=None, resultat
     return message
 
 
+def modifier_message(message, auteur, contenu, resultat_moderation=None):
+    """Modifie le texte d'un message. Le nouveau texte repasse par la modération."""
+    if message.expediteur_id != auteur.pk:
+        raise PermissionDenied("Vous ne pouvez modifier que vos propres messages.")
+    contenu = (contenu or "").strip()
+    if not contenu and not message.fichier:
+        raise ValidationError("Le message est vide.")
+    if contenu == message.contenu:
+        return message
+
+    resultat = resultat_moderation or moderer(contenu)
+    with transaction.atomic():
+        if resultat.bloque:
+            signalement = Signalement.objects.create(
+                conversation=message.conversation, auteur=auteur, contenu=contenu,
+                decision=Signalement.Decision.BLOQUE, categorie=resultat.categorie,
+                raison=f"Modification refusée. {resultat.raison}", source=resultat.source,
+            )
+            _notifier_moderateurs(signalement)
+        else:
+            message.contenu = contenu
+            message.modifie_le = timezone.now()
+            message.signale = not resultat.autorise
+            message.save(update_fields=["contenu", "modifie_le", "signale"])
+            if message.signale:
+                signalement, _ = Signalement.objects.update_or_create(message=message, defaults={
+                    "conversation": message.conversation, "auteur": auteur, "contenu": contenu,
+                    "decision": Signalement.Decision.SIGNALE, "categorie": resultat.categorie,
+                    "raison": resultat.raison, "source": resultat.source, "traite": False, "action": "",
+                })
+                _notifier_moderateurs(signalement)
+            realtime.diffuser_modification(message)
+
+    if resultat.bloque:
+        raise MessageBloque(resultat)  # le message garde son ancien texte
+    return message
+
+
+def supprimer_message(message, auteur):
+    """Supprime un de ses propres messages (et sa pièce jointe), en direct chez l'interlocuteur."""
+    if message.expediteur_id != auteur.pk:
+        raise PermissionDenied("Vous ne pouvez supprimer que vos propres messages.")
+    realtime.diffuser_suppression(message, par_auteur=True)
+    if message.fichier:
+        message.fichier.delete(save=False)
+    message.delete()
+
+
+# ---------- Annonces ----------
+
+def _extrait(texte, longueur=120):
+    return texte if len(texte) <= longueur else texte[:longueur - 3] + "..."
+
+
+def publier_annonce(annonce):
+    """Envoie l'annonce à son public (notification en direct, et e-mail si elle est importante)."""
+    destinataires = list(annonce.destinataires())
+    notifier(destinataires, annonce.titre, _extrait(annonce.contenu), type=Notification.Type.ANNONCE,
+             lien=annonce.get_absolute_url(), email=annonce.importante)
+    return len(destinataires)
+
+
+def mettre_a_jour_annonce(annonce):
+    """Après une modification : met à jour les notifications et ajuste le public si besoin."""
+    notifications = annonce.notifications()
+    notifications.update(titre=annonce.titre, message=_extrait(annonce.contenu))
+    concernes = set(annonce.destinataires().values_list("pk", flat=True))
+    deja = set(notifications.values_list("destinataire_id", flat=True))
+    notifications.filter(destinataire_id__in=deja - concernes).delete()
+    nouveaux = annonce.destinataires().filter(pk__in=concernes - deja)
+    notifier(list(nouveaux), annonce.titre, _extrait(annonce.contenu), type=Notification.Type.ANNONCE,
+             lien=annonce.get_absolute_url(), email=annonce.importante)
+    for user_id in deja ^ concernes:
+        realtime.pousser_compteurs_id(user_id)
+    return len(concernes)
+
+
+def supprimer_annonce(annonce):
+    """Supprime l'annonce et les notifications qu'elle avait créées."""
+    notifications = annonce.notifications()
+    concernes = list(notifications.filter(lue=False).values_list("destinataire_id", flat=True))
+    notifications.delete()
+    annonce.delete()
+    for user_id in concernes:
+        realtime.pousser_compteurs_id(user_id)
+
+
 def traiter_signalement(signalement, moderateur, action):
     """Décision humaine sur un message bloqué ou signalé par l'IA. Renvoie un message de confirmation."""
     A = Signalement.Action

@@ -196,7 +196,11 @@
         ligne.dataset.messageId = m.id;
 
         const bloc = el("div");
-        bloc.append(el("small", "bulle-meta", (m.moi ? "Vous" : m.auteur) + " " + m.heure));
+        const meta = el("small", "bulle-meta", (m.moi ? "Vous" : m.auteur) + " " + m.heure);
+        const modifie = el("span", "bulle-modifie", " · modifié");
+        modifie.hidden = !m.modifie;
+        meta.append(modifie);
+        bloc.append(meta);
         const bulle = el("div", "bulle" + (m.signale ? " bulle-signalee" : ""));
 
         if (m.fichier) {
@@ -225,9 +229,70 @@
         if (m.signale) bulle.append(el("small", "bulle-alerte", "Signalé à la modération"));
 
         bloc.append(bulle);
+        if (m.moi) bloc.append(creerActions(m.id));
         ligne.append(el("span", "avatar avatar-sm", m.initiales), bloc);
         return ligne;
     }
+
+    /** Liens « Modifier » et « Supprimer » d'un de ses propres messages. */
+    function creerActions(id) {
+        const actions = el("div", "bulle-actions");
+        const modifier = el("a", "", "Modifier");
+        modifier.href = discussion.dataset.urlModifier.replace("/0/", "/" + id + "/");
+        const form = el("form");
+        form.method = "post";
+        form.action = discussion.dataset.urlSupprimer.replace("/0/", "/" + id + "/");
+        form.dataset.supprimerMessage = "";
+        const jeton = el("input");
+        jeton.type = "hidden";
+        jeton.name = "csrfmiddlewaretoken";
+        jeton.value = cookie("csrftoken");
+        const bouton = el("button", "", "Supprimer");
+        bouton.type = "submit";
+        form.append(jeton, bouton);
+        actions.append(modifier, form);
+        return actions;
+    }
+
+    function marquerSupprime(id, parAuteur) {
+        const ligne = document.getElementById("message-" + id);
+        if (!ligne) return;
+        const bulle = ligne.querySelector(".bulle");
+        bulle.className = "bulle bulle-supprimee";
+        bulle.replaceChildren(el("em", "", parAuteur ? "Message supprimé" : "Message supprimé par la modération"));
+        const actions = ligne.querySelector(".bulle-actions");
+        if (actions) actions.remove();
+    }
+
+    function appliquerModification(m) {
+        const ligne = document.getElementById("message-" + m.id);
+        if (!ligne) return;
+        let texte = ligne.querySelector(".bulle-texte");
+        if (!texte) {
+            texte = el("div", "bulle-texte");
+            ligne.querySelector(".bulle").append(texte);
+        }
+        texte.textContent = m.contenu;
+        ligne.querySelector(".bulle").classList.toggle("bulle-signalee", m.signale);
+        const modifie = ligne.querySelector(".bulle-modifie");
+        if (modifie) modifie.hidden = false;
+    }
+
+    // Suppression d'un de ses messages sans recharger la page
+    discussion.addEventListener("submit", function (e) {
+        const form = e.target.closest("[data-supprimer-message]");
+        if (!form) return;
+        e.preventDefault();
+        if (!window.confirm("Supprimer ce message pour vous et votre interlocuteur ?")) return;
+        fetch(form.action, {
+            method: "POST",
+            body: new FormData(form),
+            headers: { "X-Requested-With": "XMLHttpRequest", "X-CSRFToken": cookie("csrftoken") },
+        })
+            .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+            .then(function () { marquerSupprime(Number(form.closest("[data-message-id]").dataset.messageId), true); })
+            .catch(function () { montrerAlerte("La suppression a échoué. Réessayez."); });
+    });
 
     function afficherMessage(m) {
         if (affiches.has(m.id)) return;
@@ -279,13 +344,9 @@
                 // le texte reste dans la zone de saisie pour être corrigé
                 montrerAlerte(d.message + (d.source ? " (détecté par : " + d.source + ")" : ""));
             } else if (d.type === "supprime") {
-                // Message retiré par la modération : remplacé par une mention discrète
-                const ligne = document.getElementById("message-" + d.id);
-                if (ligne) {
-                    const bulle = ligne.querySelector(".bulle");
-                    bulle.className = "bulle bulle-supprimee";
-                    bulle.replaceChildren(el("em", "", "Message supprimé par la modération"));
-                }
+                marquerSupprime(d.id, d.par_auteur);
+            } else if (d.type === "modifie") {
+                appliquerModification(d.message);
             } else if (d.type === "ecrit") {
                 montrerEcrit(d.nom);
             } else if (d.type === "presence") {

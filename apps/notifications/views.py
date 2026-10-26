@@ -12,8 +12,9 @@ from django.views.decorators.http import require_GET, require_POST
 from apps.accounts.decorators import admin_required
 from apps.accounts.models import User
 
-from .forms import MessageForm, NouvelleConversationForm
-from .models import Conversation, Message, Signalement
+from . import services
+from .forms import AnnonceForm, MessageForm, ModifierMessageForm, NouvelleConversationForm
+from .models import Annonce, Conversation, Message, Signalement
 from .moderation import ia_disponible
 from .realtime import est_en_ligne, message_en_dict
 from .services import (MessageBloque, envoyer_message, marquer_toutes_lues, messages_non_lus,
@@ -257,3 +258,98 @@ def traiter_signalement(request, pk):
     except (PermissionDenied, ValidationError) as e:
         messages.error(request, f"Action impossible : {e.messages[0] if isinstance(e, ValidationError) else e}")
     return rediriger_vers_suivant(request, "notifications:moderation")
+
+
+# ---------- Messages : modifier et supprimer les siens ----------
+
+@login_required
+def message_modifier(request, pk):
+    message = get_object_or_404(Message.objects.select_related("conversation"), pk=pk, expediteur=request.user)
+    form = ModifierMessageForm(request.POST or None, initial={"contenu": message.contenu})
+    if request.method == "POST" and form.is_valid():
+        try:
+            services.modifier_message(message, request.user, form.cleaned_data["contenu"])
+        except MessageBloque as e:
+            form.add_error("contenu", f"Modification refusée par la modération : {e.resultat.raison} "
+                                      f"(détecté par : {e.resultat.libelle_source})")
+        except ValidationError as e:
+            form.add_error("contenu", e.messages[0])
+        else:
+            messages.success(request, "Message modifié.")
+            return redirect(f"{message.conversation.get_absolute_url()}#message-{message.pk}")
+    return render(request, "notifications/message_modifier.html", {"message": message, "form": form})
+
+
+@require_POST
+@login_required
+def message_supprimer(request, pk):
+    message = get_object_or_404(Message.objects.select_related("conversation"), pk=pk, expediteur=request.user)
+    conversation = message.conversation
+    services.supprimer_message(message, request.user)
+    if est_ajax(request):
+        return JsonResponse({"ok": True})
+    messages.success(request, "Message supprimé.")
+    return redirect(conversation)
+
+
+# ---------- Annonces (CRUD) ----------
+
+@login_required
+def annonces(request):
+    """Liste : tout pour l'administrateur (avec gestion), seulement les siennes pour les autres."""
+    qs = Annonce.objects.select_related("auteur")
+    if not request.user.est_administrateur:
+        qs = qs.filter(public__in=[Annonce.Public.TOUS, request.user.role])
+    page = Paginator(qs, 15).get_page(request.GET.get("page"))
+    if request.user.est_administrateur:
+        for annonce in page:
+            stats = annonce.notifications().aggregate(envoyees=Count("id"), lues=Count("id", filter=Q(lue=True)))
+            annonce.nb_envoyees, annonce.nb_lues = stats["envoyees"], stats["lues"]
+    return render(request, "notifications/annonces.html", {"page": page})
+
+
+@login_required
+def annonce_detail(request, pk):
+    annonce = get_object_or_404(Annonce.objects.select_related("auteur"), pk=pk)
+    if not annonce.concerne(request.user):
+        raise Http404
+    annonce.notifications().filter(destinataire=request.user, lue=False).update(lue=True)
+    return render(request, "notifications/annonce_detail.html", {"annonce": annonce})
+
+
+@admin_required
+def annonce_creer(request):
+    form = AnnonceForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        annonce = form.save(commit=False)
+        annonce.auteur = request.user
+        annonce.save()
+        n = services.publier_annonce(annonce)
+        messages.success(request, f"Annonce publiée auprès de {n} personne{'s' if n > 1 else ''}.")
+        return redirect("notifications:annonces")
+    return render(request, "notifications/annonce_form.html", {"form": form})
+
+
+@admin_required
+def annonce_modifier(request, pk):
+    annonce = get_object_or_404(Annonce, pk=pk)
+    form = AnnonceForm(request.POST or None, instance=annonce)
+    if request.method == "POST" and form.is_valid():
+        annonce = form.save()
+        n = services.mettre_a_jour_annonce(annonce)
+        messages.success(request, f"Annonce modifiée ({n} destinataire{'s' if n > 1 else ''}).")
+        return redirect("notifications:annonces")
+    return render(request, "notifications/annonce_form.html", {"form": form, "annonce": annonce})
+
+
+@admin_required
+def annonce_supprimer(request, pk):
+    annonce = get_object_or_404(Annonce, pk=pk)
+    if request.method == "POST":
+        titre = annonce.titre
+        services.supprimer_annonce(annonce)
+        messages.success(request, f"Annonce « {titre} » supprimée.")
+        return redirect("notifications:annonces")
+    return render(request, "notifications/annonce_supprimer.html", {
+        "annonce": annonce, "nb_notifications": annonce.notifications().count(),
+    })
