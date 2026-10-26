@@ -137,7 +137,11 @@ class ConversationConsumer(AsyncJsonWebsocketConsumer):
             await self.marquer_lue()
 
     async def chat_supprime(self, event):
-        await self.send_json({"type": "supprime", "id": event["id"]})
+        await self.send_json({"type": "supprime", "id": event["id"], "par_auteur": event.get("par_auteur", False)})
+
+    async def chat_modifie(self, event):
+        message = event["message"]
+        await self.send_json({"type": "modifie", "message": {**message, "moi": message["expediteur_id"] == self.user.pk}})
 
     async def chat_ecrit(self, event):
         if event["user_id"] != self.user.pk:

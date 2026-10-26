@@ -150,3 +150,17 @@ class TempsReelTests(TransactionTestCase):
         evenement = await recevoir_type(ws_formateur, "supprime")
         self.assertEqual(evenement["id"], message.pk)
         await ws_formateur.disconnect()
+
+    async def test_modification_et_suppression_par_l_auteur_en_direct(self):
+        message = await database_sync_to_async(services.envoyer_message)(self.conv, self.apprenant, "Bonjour")
+        ws_formateur, _, _ = await connecter(self.chemin, self.formateur)
+
+        await database_sync_to_async(services.modifier_message)(message, self.apprenant, "Bonjour Karim")
+        modifie = await recevoir_type(ws_formateur, "modifie")
+        self.assertEqual((modifie["message"]["contenu"], modifie["message"]["modifie"]), ("Bonjour Karim", True))
+
+        identifiant = message.pk  # delete() remet message.pk à None
+        await database_sync_to_async(services.supprimer_message)(message, self.apprenant)
+        supprime = await recevoir_type(ws_formateur, "supprime")
+        self.assertEqual((supprime["id"], supprime["par_auteur"]), (identifiant, True))
+        await ws_formateur.disconnect()

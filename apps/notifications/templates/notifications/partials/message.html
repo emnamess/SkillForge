@@ -2,7 +2,7 @@
 <div class="bulle-ligne{% if m.expediteur_id == user.pk %} moi{% endif %}" id="message-{{ m.pk }}" data-message-id="{{ m.pk }}">
     <span class="avatar avatar-sm">{{ m.expediteur.initiales }}</span>
     <div>
-        <small class="bulle-meta">{% if m.expediteur_id == user.pk %}Vous{% else %}{{ m.expediteur }}{% endif %} {{ m.date_envoi|time:"H:i" }}</small>
+        <small class="bulle-meta">{% if m.expediteur_id == user.pk %}Vous{% else %}{{ m.expediteur }}{% endif %} {{ m.date_envoi|time:"H:i" }}<span class="bulle-modifie"{% if not m.modifie_le %} hidden{% endif %}> · modifié</span></small>
         <div class="bulle{% if m.signale %} bulle-signalee{% endif %}">
             {% if m.fichier %}
                 {% if m.est_image %}
@@ -19,5 +19,14 @@
             {% if m.contenu %}<div class="bulle-texte">{{ m.contenu|linebreaksbr }}</div>{% endif %}
             {% if m.signale %}<small class="bulle-alerte">Signalé à la modération</small>{% endif %}
         </div>
+        {% if m.expediteur_id == user.pk %}
+            <div class="bulle-actions">
+                <a href="{% url 'notifications:message_modifier' m.pk %}">Modifier</a>
+                <form method="post" action="{% url 'notifications:message_supprimer' m.pk %}" data-supprimer-message>
+                    {% csrf_token %}
+                    <button type="submit">Supprimer</button>
+                </form>
+            </div>
+        {% endif %}
     </div>
 </div>

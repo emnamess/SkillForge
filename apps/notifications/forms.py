@@ -1,5 +1,6 @@
 from django import forms
 
+from .models import Annonce
 from .services import destinataires_possibles
 
 
@@ -35,3 +36,19 @@ class NouvelleConversationForm(MessageForm):
             lambda u: f"{u} · {u.get_role_display()}" + (f" ({u.specialite})" if u.specialite else "")
         )
         self.fields["contenu"].widget.attrs["rows"] = 4
+
+
+class AnnonceForm(forms.ModelForm):
+    class Meta:
+        model = Annonce
+        fields = ("titre", "contenu", "public", "importante")
+        labels = {"public": "Destinataires", "importante": "Annonce importante (envoyée aussi par e-mail)"}
+        widgets = {
+            "titre": forms.TextInput(attrs={"placeholder": "Ex. Maintenance prévue dimanche"}),
+            "contenu": forms.Textarea(attrs={"rows": 8}),
+        }
+
+
+class ModifierMessageForm(forms.Form):
+    contenu = forms.CharField(label="Message", max_length=2000, required=False,
+                              widget=forms.Textarea(attrs={"rows": 4}))

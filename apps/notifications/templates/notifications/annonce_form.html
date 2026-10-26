@@ -1,0 +1,24 @@
+{% extends "base_app.html" %}
+
+{% block title %}{% if annonce %}Modifier l'annonce{% else %}Nouvelle annonce{% endif %}{% endblock %}
+
+{% block content %}
+<a href="{% url 'notifications:annonces' %}" class="back-link">← Retour aux annonces</a>
+<h1 class="page-title">{% if annonce %}Modifier l'annonce{% else %}Nouvelle annonce{% endif %}</h1>
+<p class="page-subtitle">
+    {% if annonce %}Les destinataires verront la nouvelle version ; si vous changez le public, les nouveaux destinataires sont prévenus.
+    {% else %}L'annonce arrive tout de suite dans la cloche des destinataires.{% endif %}
+</p>
+
+<form method="post" class="card form form-narrow" novalidate>
+    {% csrf_token %}
+    {% include "partials/form_field.html" with field=form.titre %}
+    {% include "partials/form_field.html" with field=form.contenu %}
+    {% include "partials/form_field.html" with field=form.public %}
+    {% include "partials/form_field.html" with field=form.importante %}
+    <div class="form-boutons">
+        <button type="submit" class="btn btn-primary">{% if annonce %}Enregistrer{% else %}Publier{% endif %}</button>
+        <a href="{% url 'notifications:annonces' %}" class="btn btn-outline">Annuler</a>
+    </div>
+</form>
+{% endblock %}

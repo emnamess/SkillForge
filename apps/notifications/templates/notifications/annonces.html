@@ -1,0 +1,78 @@
+{% extends "base_app.html" %}
+{% load humanize %}
+
+{% block title %}Annonces{% endblock %}
+
+{% block content %}
+<div class="entete-page">
+    <div>
+        <h1 class="page-title">Annonces</h1>
+        <p class="page-subtitle">
+            {% if user.est_administrateur %}Publiez des informations auprès des apprenants, des formateurs ou de tout le monde.
+            {% else %}Les informations publiées par l'équipe SkillForge.{% endif %}
+        </p>
+    </div>
+    {% if user.est_administrateur %}
+        <a href="{% url 'notifications:annonce_creer' %}" class="btn btn-primary">Nouvelle annonce</a>
+    {% endif %}
+</div>
+
+{% if user.est_administrateur %}
+<div class="card table-card">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Annonce</th>
+                <th>Destinataires</th>
+                <th>Lue par</th>
+                <th>Publiée</th>
+                <th class="text-right">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for a in page %}
+            <tr>
+                <td>
+                    <a href="{{ a.get_absolute_url }}"><strong>{{ a.titre }}</strong></a>
+                    {% if a.importante %}<span class="badge badge-rust">Importante</span>{% endif %}
+                    <small class="annonce-extrait">{{ a.contenu|truncatechars:90 }}</small>
+                </td>
+                <td><span class="badge badge-indigo">{{ a.get_public_display }}</span></td>
+                <td>{{ a.nb_lues }} / {{ a.nb_envoyees }}</td>
+                <td>{{ a.date_creation|date:"d/m/Y H:i" }}{% if a.modifiee %}<small class="muted"> · modifiée</small>{% endif %}</td>
+                <td class="actions">
+                    <a href="{% url 'notifications:annonce_modifier' a.pk %}" class="btn btn-sm btn-outline">Modifier</a>
+                    <a href="{% url 'notifications:annonce_supprimer' a.pk %}" class="btn btn-sm btn-outline">Supprimer</a>
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="5" class="empty">Aucune annonce pour le moment. Créez la première !</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="annonces-liste">
+    {% for a in page %}
+        <a href="{{ a.get_absolute_url }}" class="card annonce-carte{% if a.importante %} importante{% endif %}">
+            <div class="annonce-carte-entete">
+                <strong>{{ a.titre }}</strong>
+                {% if a.importante %}<span class="badge badge-rust">Importante</span>{% endif %}
+            </div>
+            <p>{{ a.contenu|truncatechars:180 }}</p>
+            <small class="muted">{{ a.date_creation|naturaltime }}</small>
+        </a>
+    {% empty %}
+        <div class="card"><p class="vide">Aucune annonce pour le moment.</p></div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if page.has_other_pages %}
+<nav class="pagination">
+    {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}" class="btn btn-sm btn-outline">Précédent</a>{% endif %}
+    <span>Page {{ page.number }} sur {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a href="?page={{ page.next_page_number }}" class="btn btn-sm btn-outline">Suivant</a>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}

@@ -113,8 +113,19 @@ Pour tester rapidement les trois rôles, créer des comptes depuis `/comptes/ins
 | `/notifications/messagerie/nouvelle/?a=<id>` | Écrire à un utilisateur (destinataire présélectionné) |
 | `/notifications/messagerie/recherche/?q=...` | Recherche dans les messages |
 | `/notifications/moderation/` | Signalements de la modération IA (administrateur) |
+| `/notifications/annonces/` | Annonces (CRUD pour l'administrateur, lecture pour le public visé) |
+| `/notifications/messagerie/message/<id>/modifier/` | Modifier un de ses messages |
 
 Règles de la messagerie : un apprenant peut écrire aux formateurs et aux administrateurs ; formateurs et administrateurs peuvent écrire à tout le monde.
+
+### CRUD du module
+
+| Entité | Créer | Lire | Modifier | Supprimer |
+|---|---|---|---|---|
+| **Annonce** (administrateur) | `annonces/nouvelle/` : publiée en direct auprès du public choisi (tous, apprenants, formateurs, recruteurs, administrateurs), par e-mail si « importante » | `annonces/` (tableau avec taux de lecture) et `annonces/<id>/` | `annonces/<id>/modifier/` : les notifications sont mises à jour, le public est réajusté | `annonces/<id>/supprimer/` : page de confirmation, notifications retirées |
+| **Message** (son auteur) | envoi dans une conversation | conversation, recherche | *Modifier* sous la bulle : nouveau texte revérifié par Gemini, mention « modifié », mis à jour en direct | *Supprimer* sous la bulle : retiré en direct chez l'interlocuteur |
+| **Notification** (destinataire) | automatique | `/notifications/`, cloche | marquer comme lue | ✓ |
+| **Signalement** (administrateur) | automatique (IA) | `moderation/` | décision du modérateur | — (trace conservée) |
 
 ### Utiliser les notifications depuis votre module
 

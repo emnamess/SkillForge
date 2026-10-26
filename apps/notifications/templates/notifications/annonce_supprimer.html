@@ -1,0 +1,20 @@
+{% extends "base_app.html" %}
+
+{% block title %}Supprimer l'annonce{% endblock %}
+
+{% block content %}
+<a href="{% url 'notifications:annonces' %}" class="back-link">← Retour aux annonces</a>
+<div class="card form-narrow">
+    <h1 class="page-title">Supprimer l'annonce ?</h1>
+    <p class="page-subtitle">« {{ annonce.titre }} »</p>
+    <p>
+        Cette action est définitive. {% if nb_notifications %}Les {{ nb_notifications }} notification{{ nb_notifications|pluralize }}
+        envoyée{{ nb_notifications|pluralize }} pour cette annonce seront aussi retirée{{ nb_notifications|pluralize }}.{% endif %}
+    </p>
+    <form method="post" class="form-boutons">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Supprimer définitivement</button>
+        <a href="{% url 'notifications:annonces' %}" class="btn btn-outline">Annuler</a>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base_app.html" %}
+
+{% block title %}Modifier le message{% endblock %}
+
+{% block content %}
+<a href="{{ message.conversation.get_absolute_url }}#message-{{ message.pk }}" class="back-link">← Retour à la conversation</a>
+<h1 class="page-title">Modifier le message</h1>
+<p class="page-subtitle">Envoyé le {{ message.date_envoi|date:"j F Y à H:i" }}. Le nouveau texte est vérifié par la modération IA.</p>
+
+<form method="post" class="card form form-narrow" novalidate>
+    {% csrf_token %}
+    {% if message.fichier %}<p class="muted">Pièce jointe conservée : {{ message.nom_fichier }}</p>{% endif %}
+    {% include "partials/form_field.html" with field=form.contenu %}
+    <div class="form-boutons">
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+        <a href="{{ message.conversation.get_absolute_url }}#message-{{ message.pk }}" class="btn btn-outline">Annuler</a>
+    </div>
+</form>
+{% endblock %}
